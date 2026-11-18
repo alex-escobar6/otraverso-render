@@ -1,6 +1,6 @@
 # Fases de OTRAVERSO
 
-  Estado actual: **Fases 1 a 7 completadas**. SHOP funcional y PLAY con NEXUS RUSH disponible.
+  Estado actual: **Fases 1 a 8 completadas**. SHOP funcional, PLAY con NEXUS RUSH disponible y hub ligero sin WebGL.
 
 | Fase | Objetivo | Resultado |
 | --- | --- | --- |
@@ -11,6 +11,7 @@
 | 5 | Pruebas | 11 pruebas de integración sobre BD temporal: esquema, portal, tienda, CSRF, RBAC, CRUD, stock, pedidos, WhatsApp, conversión y render de todas las páginas admin. |
 | 6 | Entrega | README, documentación, `.env.example`, `.gitignore`, scripts de backup/restore/create_admin y verificación final. |
 | 7 | Universo 3D y PLAY | Hub dimensional con portales, transiciones 3D, SHOP conectado, PLAY y NEXUS RUSH con tres circuitos, audio procedural, récord local, calidad adaptativa y fallback. |
+| 8 | Optimización profunda | Diagnóstico del bloqueo por servidor obsoleto, hub rediseñado con SVG/CSS 3D sin WebGL, juego migrado a Canvas 2D con carga diferida, loader no bloqueante, timeout/reintento y verificación de rendimiento. |
 
 ## Criterios cumplidos
 

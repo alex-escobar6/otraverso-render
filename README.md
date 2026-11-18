@@ -2,11 +2,11 @@
 
 Plataforma digital modular con identidad propia. La primera versión funcional es **OTRAVERSO SHOP**: tienda de productos novedosos con inventario real, productos bajo pedido, cobertura en Nariño y solicitudes de compra por WhatsApp persistentes.
 
-**OTRAVERSO PLAY** está disponible con `NEXUS RUSH`, un juego de carreras 3D con tres circuitos. **WHAT IF** y **LABS** siguen declarados como planeados, sin funcionalidades activas ni datos simulados.
+**OTRAVERSO PLAY** está disponible con `NEXUS RUSH`, una carrera futurista ligera en Canvas 2D con perspectiva simulada y tres circuitos. **WHAT IF** y **LABS** siguen declarados como planeados, sin funcionalidades activas ni datos simulados.
 
 ## Estado
 
-- Hub 3D OTRAVERSO con ciudad flotante, portales dimensionales y transiciones con continuidad.
+- Hub dimensional ligero: ciudad SVG en capas, CSS 3D, portales con profundidad y transiciones de perspectiva sin WebGL.
 - PLAY: `/play` y `/play/nexus-rush` con NEXUS RUSH (tres circuitos, turbo, obstáculos, energía, récord local y audio procedural).
 - SHOP: inicio, catálogo con filtros y búsqueda, categorías, ficha de producto, cobertura y páginas informativas.
 - Modalidades: `stock` (inventario real) y `order` (bajo pedido/importación), claramente diferenciadas.
@@ -55,7 +55,7 @@ app/
   modules/    portal, play, shop, admin
   services/   catálogo, inventario, pedidos, WhatsApp, cobertura, analítica
   templates/  HTML por universo y panel
-   static/     CSS y JS propios; Three.js r149 local y motores universe-core/galaxy/nexus-rush
+   static/     CSS/SVG propios, universe-core (SPA ligera), galaxy (hub) y nexus-rush (Canvas 2D, carga diferida)
   config.py   Variables de entorno
   db.py       Esquema, migraciones y semilla
   security.py Hash, tokens y saneamiento
@@ -76,6 +76,8 @@ tests/        Suite de integración con BD temporal
 - Los récords de NEXUS RUSH se guardan en `localStorage` del navegador (`otraverso.nexus.best.v1`).
 - Controles de NEXUS RUSH: flechas/WASD, Espacio turbo, Shift salto, P pausa, R reiniciar, Esc salir; también hay controles táctiles.
 - El audio se genera con WebAudio desde código; no hay archivos de audio ni licencias externas.
+- La portada no crea contextos WebGL ni render loops; `three.min.js` permanece en el repositorio pero no se solicita.
+- `nexus-rush.js` se carga dinámicamente solo cuando se inicia un circuito, con timeout y botón de reintento.
 
 ## Documentación
 
