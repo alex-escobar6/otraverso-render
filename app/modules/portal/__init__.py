@@ -9,7 +9,7 @@ UNIVERSE_COPY = {
     "portal": ("Universo central", "El acceso a una plataforma diseñada para crecer por módulos.", "#6d5cff"),
     "shop": ("Descubrimiento comercial", "Descubre cosas que no sabías que necesitabas. Productos reales, inventario y pedidos especiales.", "#8b5cf6"),
     "whatif": ("Imaginación y posibilidades", "¿Y si todo pudiera ser diferente? Portales y realidades alternativas en diseño.", "#8b7cff"),
-    "play": ("Entretenimiento", "El siguiente nivel comienza aquí. Un mundo lúdico en conceptualización.", "#f472b6"),
+    "play": ("Entretenimiento", "El siguiente nivel comienza aquí: NEXUS RUSH, tres circuitos de carrera 3D.", "#f472b6"),
     "labs": ("Innovación", "Experimenta. Crea. Evoluciona. Prototipos y herramientas en desarrollo.", "#2dd4bf"),
 }
 
@@ -44,14 +44,14 @@ UNIVERSE_META = {
         "order": "03",
         "short": "PLAY",
         "tagline": "El siguiente nivel comienza aquí",
-        "cta": "VER PRESENTACIÓN",
-        "status": "PRÓXIMAMENTE",
-        "index_status": "Planeado",
+        "cta": "ENTRAR A PLAY",
+        "status": "DISPONIBLE",
+        "index_status": "Disponible",
         "color": "#f472b6",
         "accent": "#67e8f9",
         "x": "78%",
         "y": "68%",
-        "detail": "Un mundo de entretenimiento y experiencias lúdicas propias en etapa de conceptualización.",
+        "detail": "OTRAVERSO PLAY: NEXUS RUSH. Tres circuitos, nave antigravedad, turbo, obstáculos y récord personal.",
     },
     "labs": {
         "order": "04",
@@ -74,67 +74,43 @@ def register(router) -> None:
     router.get("/universos/{code}", universe, name="portal.universe")
 
 
-def _world_node(module, meta: dict) -> str:
+def _portal_node(module, meta: dict) -> str:
     code = module["code"]
     name = esc(module["name"])
     tagline = esc(meta["tagline"])
     order = esc(meta["order"])
     color = esc(meta["color"])
     accent = esc(meta["accent"])
-    enabled = bool(module["enabled"])
-    href = "/shop" if code == "shop" else f"/{code}"
-    action = "data-warp" if enabled else f'data-dialog="{esc(code)}"'
-    tag = "a" if enabled else "button"
-    extra = f'href="{href}"' if enabled else 'type="button" aria-haspopup="dialog"'
-    target = f' title="Abrir {name}"' if enabled else ""
+    available = bool(module["enabled"]) or code == "play"
+    href = "/shop" if code == "shop" else ("/play" if code == "play" else f"/universos/{code}")
+    status = "DISPONIBLE" if available else "Planeado"
     return f"""
-    <{tag} class="world-node world-node--{esc(code)}" data-world="{esc(code)}" data-order="{order}"
-      data-tagline="{tagline}" data-description="{esc(meta['detail'])}" data-status="{esc(meta['status'])}"
-      {action} {extra}
-      style="--node-color:{color};--node-accent:{accent};--fallback-x:{meta['x']};--fallback-y:{meta['y']}"
-      aria-label="{name}: {tagline}"{target}>
-      <span class="world-node__orbit" aria-hidden="true"></span>
-      <span class="world-node__core" aria-hidden="true"></span>
-      <span class="world-node__marker" aria-hidden="true"></span>
-      <span class="world-node__info">
-        <span class="world-node__state">UNIVERSO {order} · <em>{esc(meta['status'])}</em></span>
-        <strong>{name}</strong>
-        <span class="world-node__tagline">{tagline}</span>
-        <span class="world-node__cta">{esc(meta['cta'])} <i aria-hidden="true">→</i></span>
-      </span>
-    </{tag}>"""
+    <button class="universe-index__item" type="button" data-portal="{esc(code)}"
+      data-name="{name}" data-order="{order}" data-tagline="{tagline}" data-status="{status}"
+      data-description="{esc(meta['detail'])}" data-href="{esc(href)}"
+      data-available="{'1' if available else '0'}" data-color="{color}" data-accent="{accent}"
+      style="--dot:{color}" aria-label="Abrir {name}: {tagline}">
+      <span class="universe-index__dot"></span><span>{esc(meta['short'])}</span><small>{status}</small>
+    </button>"""
 
 
 def _world_dialog(module, meta: dict) -> str:
     code = module["code"]
     name = esc(module["name"])
     return f"""
-    <div class="world-detail" data-dialog="{esc(code)}" hidden role="dialog" aria-modal="true"
+    <div class="universe-dialog" data-dialog="{esc(code)}" hidden role="dialog" aria-modal="true"
          aria-labelledby="detail-title-{esc(code)}">
-      <div class="world-detail__backdrop" data-close></div>
-      <div class="world-detail__card" style="--detail-color:{esc(meta['color'])};--detail-accent:{esc(meta['accent'])}">
-        <button class="world-detail__close" type="button" data-close aria-label="Cerrar presentación">×</button>
-        <span class="world-detail__eyebrow">UNIVERSO {esc(meta['order'])} · PRÓXIMAMENTE</span>
+      <div class="universe-dialog__backdrop" data-close></div>
+      <div class="universe-dialog__card" style="--detail-color:{esc(meta['color'])}">
+        <button class="universe-dialog__close" type="button" data-close aria-label="Cerrar presentación">×</button>
+        <span class="universe-dialog__eyebrow">UNIVERSO {esc(meta['order'])} · PRÓXIMAMENTE</span>
         <h2 id="detail-title-{esc(code)}">{name}</h2>
-        <p class="world-detail__tagline">{esc(meta['tagline'])}</p>
-        <p class="world-detail__body">{esc(meta['detail'])}</p>
-        <p class="world-detail__note">Estado: Planeado. Sin funcionalidades activas ni módulos accesibles.</p>
-        <a class="world-detail__link" href="/universos/{esc(code)}">Ver dossier del universo <i aria-hidden="true">→</i></a>
+        <p class="universe-dialog__tagline">{esc(meta['tagline'])}</p>
+        <p class="universe-dialog__body">{esc(meta['detail'])}</p>
+        <p class="universe-dialog__note">Estado: Planeado. Sin funcionalidades activas ni módulos accesibles.</p>
+        <a class="universe-dialog__link" href="/universos/{esc(code)}">Ver dossier del universo <i aria-hidden="true">→</i></a>
       </div>
     </div>"""
-
-
-def _index_item(module, meta: dict) -> str:
-    code = module["code"]
-    short = esc(meta["short"])
-    enabled = bool(module["enabled"])
-    action = f'href="/shop" data-warp data-index="{esc(code)}"' if enabled and code == "shop" else (
-        f'href="/{code}" data-index="{esc(code)}"' if enabled else
-        f'type="button" data-dialog="{esc(code)}" data-index="{esc(code)}"'
-    )
-    tag = "a" if enabled else "button"
-    return f'<{tag} class="galaxy-index__item" {action} style="--dot:{esc(meta["color"])}">' \
-           f'<span class="galaxy-index__dot"></span><span>{short}</span><small>{esc(meta["index_status"])}</small></{tag}>'
 
 
 def home(request: Request) -> Response:
@@ -142,22 +118,19 @@ def home(request: Request) -> Response:
     modules = [row for row in query("SELECT * FROM modules ORDER BY sort_order") if row["code"] != "portal"]
     nodes = []
     dialogs = []
-    index = []
     for module in modules:
         meta = UNIVERSE_META.get(module["code"])
         if not meta:
             continue
-        nodes.append(_world_node(module, meta))
-        index.append(_index_item(module, meta))
-        if not module["enabled"]:
+        nodes.append(_portal_node(module, meta))
+        if not (module["enabled"] or module["code"] == "play"):
             dialogs.append(_world_dialog(module, meta))
 
     content = render("portal/home.html",
         HERO_TITLE=esc(visual.get("hero_title", "Hay más de un mundo por descubrir")),
         HERO_SUBTITLE=esc(visual.get("hero_subtitle", "")),
-        WORLD_NODES="".join(nodes),
-        WORLD_DIALOGS="".join(dialogs),
-        GALAXY_INDEX="".join(index),
+        PORTAL_NODES="".join(nodes),
+        PORTAL_DIALOGS="".join(dialogs),
     )
     return Response(render_page(
         "OTRAVERSO — No existe un solo universo",
@@ -167,7 +140,9 @@ def home(request: Request) -> Response:
         request=request,
         head_extra='<link rel="stylesheet" href="/static/css/galaxy.css">',
         scripts=('<script src="/static/js/vendor/three.min.js" defer></script>'
-                 '<script src="/static/js/galaxy.js" defer></script>'),
+                 '<script src="/static/js/universe-core.js" defer></script>'
+                 '<script src="/static/js/galaxy.js" defer></script>'
+                 '<script src="/static/js/nexus-rush.js" defer></script>'),
     ))
 
 

@@ -10,7 +10,7 @@ from app.config import DATA_DIR, STATIC_DIR, UPLOAD_DIR, Config
 from app.core.auth import check_csrf, load_session, require_permission
 from app.core.http import HTTPError, Request, Response, Router, error_page
 from app.db import init_db
-from app.modules import admin, portal, shop
+from app.modules import admin, play, portal, shop
 from app.services.analytics import track_visit
 
 
@@ -18,6 +18,7 @@ def create_app() -> Router:
     init_db()
     router = Router()
     portal.register(router)
+    play.register(router)
     shop.register(router)
     admin.register(router)
     return router

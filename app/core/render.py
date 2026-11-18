@@ -104,7 +104,8 @@ def _public_nav(enabled: set[str], active: str, request: object) -> str:
             continue
         css = "nav-link active" if active == code else "nav-link"
         parts.append(f'<a class="{css}" href="{href}">{label}</a>')
-    for code, label in (("whatif", "WHAT IF"), ("play", "PLAY"), ("labs", "LABS")):
+    parts.append('<a class="nav-link" href="/play">PLAY</a>')
+    for label in ("WHAT IF", "LABS"):
         parts.append(f'<span class="nav-link nav-soon" title="Universo planeado">{label}</span>')
     if request is not None and getattr(request, "user", None):
         parts.append('<a class="nav-link nav-admin" href="/admin">Panel</a>')
