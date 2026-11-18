@@ -26,10 +26,10 @@
 
   var TAU = Math.PI * 2;
   var worlds = [
-    { id: 'shop', color: '#8b5cf6', accent: '#54e8ff', base: -0.42, orbit: 1.02, size: 0.076, speed: 0.000055, parallax: 22, ring: true, moons: true },
-    { id: 'whatif', color: '#ffb347', accent: '#ffd89b', base: -1.74, orbit: 0.96, size: 0.056, speed: 0.00004, parallax: 15, ring: false, moons: false },
-    { id: 'play', color: '#f472b6', accent: '#7dd3fc', base: 0.78, orbit: 0.92, size: 0.052, speed: 0.00007, parallax: 18, ring: true, moons: false },
-    { id: 'labs', color: '#60a5fa', accent: '#5eead4', base: 2.52, orbit: 0.9, size: 0.05, speed: 0.00005, parallax: 14, ring: false, moons: false }
+    { id: 'shop', color: '#8b5cf6', accent: '#54e8ff', base: -0.42, orbit: 1.02, size: 0.076, speed: 0.000055, spin: 0.00011, parallax: 22, ring: true, moons: true },
+    { id: 'whatif', color: '#ffb347', accent: '#ffd89b', base: -1.74, orbit: 0.96, size: 0.056, speed: 0.00004, spin: 0.00017, parallax: 15, ring: false, moons: false },
+    { id: 'play', color: '#f472b6', accent: '#7dd3fc', base: 0.78, orbit: 0.92, size: 0.052, speed: 0.00007, spin: 0.00014, parallax: 18, ring: true, moons: false },
+    { id: 'labs', color: '#60a5fa', accent: '#5eead4', base: 2.52, orbit: 0.9, size: 0.05, speed: 0.00005, spin: 0.00009, parallax: 14, ring: false, moons: false }
   ];
   var shopPalette = {
     ice: [229, 252, 255],
@@ -92,6 +92,12 @@
   var lastTrigger = null;
   var warp = null;
   var warpProgress = 0;
+  var view = { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 };
+  var drag = null;
+  var events = [];
+  var eventClock = 0;
+  var eventNext = 1400;
+  var eventsSeeded = false;
 
   function hexRgb(value) {
     var hex = String(value || '#ffffff').replace('#', '');
@@ -103,6 +109,127 @@
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  function makeEvent() {
+    var color = Math.random() > 0.55 ? [120, 205, 255] : [190, 160, 255];
+    if (Math.random() < 0.45) {
+      var life = 1500 + Math.random() * 900;
+      return {
+        type: 'flare',
+        x: cx + (Math.random() - 0.5) * rx * 1.5,
+        y: cy + (Math.random() - 0.5) * ry * 1.5,
+        life: life,
+        maxLife: life,
+        color: color,
+        size: 3 + Math.random() * 4
+      };
+    }
+    var fromLeft = Math.random() > 0.5;
+    var duration = 8500 + Math.random() * 4500;
+    return {
+      type: 'drift',
+      x: fromLeft ? -40 : W + 40,
+      y: H * (0.1 + Math.random() * 0.8),
+      vx: (fromLeft ? 1 : -1) * (0.038 + Math.random() * 0.05),
+      vy: (Math.random() - 0.5) * 0.014,
+      life: duration,
+      maxLife: duration,
+      color: color,
+      size: 0.9 + Math.random() * 1.5
+    };
+  }
+
+  function updateEvents(delta) {
+    eventClock += delta;
+    if (eventClock >= eventNext) {
+      eventClock = 0;
+      eventNext = (lowPower ? 6500 : 3800) + Math.random() * (lowPower ? 4000 : 3200);
+      if (events.length < (lowPower ? 2 : 5)) events.push(makeEvent());
+    }
+    for (var i = events.length - 1; i >= 0; i--) {
+      var event = events[i];
+      event.life -= delta;
+      if (event.type === 'drift') {
+        event.x += event.vx * delta;
+        event.y += event.vy * delta;
+        if (event.x < -60 || event.x > W + 60 || event.y < -40 || event.y > H + 40) event.life = 0;
+      }
+      if (event.life <= 0) events.splice(i, 1);
+    }
+  }
+
+  function drawEvents() {
+    if (!events.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < events.length; i++) {
+      var event = events[i];
+      var fadeIn = Math.min(1, (event.maxLife - event.life) / 700);
+      var fadeOut = Math.min(1, event.life / 900);
+      var alpha = fadeIn * fadeOut;
+      if (event.type === 'flare') {
+        var progress = 1 - event.life / event.maxLife;
+        ctx.strokeStyle = rgba(event.color, alpha * (0.38 - progress * 0.22));
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(event.x, event.y, event.size + progress * 26, 0, TAU);
+        ctx.stroke();
+        ctx.fillStyle = rgba(event.color, alpha * 0.5);
+        ctx.beginPath();
+        ctx.arc(event.x, event.y, Math.max(0.8, event.size * (1 - progress * 0.5)), 0, TAU);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = rgba(event.color, alpha * 0.32);
+        ctx.lineWidth = Math.max(0.8, event.size * 0.7);
+        ctx.beginPath();
+        ctx.moveTo(event.x, event.y);
+        ctx.lineTo(event.x - event.vx * 220, event.y - event.vy * 220);
+        ctx.stroke();
+        ctx.fillStyle = rgba(event.color, alpha * 0.9);
+        ctx.beginPath();
+        ctx.arc(event.x, event.y, Math.max(0.9, event.size), 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function applyView() {
+    if (view.x === 0 && view.y === 0 && view.z === 1) return;
+    ctx.translate(W / 2 + view.x, H / 2 + view.y);
+    ctx.scale(view.z, view.z);
+    ctx.translate(-W / 2, -H / 2);
+  }
+
+  function updateView(delta) {
+    var ease = 1 - Math.pow(0.9, delta / 16.67);
+    view.x += (view.tx - view.x) * ease;
+    view.y += (view.ty - view.y) * ease;
+    view.z += (view.tz - view.z) * ease;
+  }
+
+  function resetView() {
+    view.tx = 0;
+    view.ty = 0;
+    view.tz = 1;
+  }
+
+  function drawPointerAura() {
+    if (coarse || lowPower || !ctx) return;
+    var px = W * (pointer.x + 1) / 2;
+    var py = H * (pointer.y + 1) / 2;
+    var radius = M * 0.14;
+    var aura = ctx.createRadialGradient(px, py, 0, px, py, radius);
+    aura.addColorStop(0, 'rgba(130,190,255,0.055)');
+    aura.addColorStop(1, 'rgba(130,190,255,0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, TAU);
+    ctx.fill();
+    ctx.restore();
   }
 
   function rgba(color, alpha) {
@@ -194,6 +321,8 @@
     W = Math.max(1, rect.width);
     H = Math.max(1, rect.height);
     M = Math.min(W, H);
+    view.tx = clamp(view.tx, -W * 0.12, W * 0.12);
+    view.ty = clamp(view.ty, -H * 0.1, H * 0.1);
     mobile = window.innerWidth < 760;
     medium = !mobile && W < 1200;
     DPR = Math.min(window.devicePixelRatio || 1, lowPower ? 1 : 1.6);
@@ -211,6 +340,10 @@
     rx = M * (mobile ? 0.4 : medium ? 0.24 : 0.36);
     ry = rx * (mobile ? 0.54 : 0.46);
     buildScene();
+    if (!eventsSeeded) {
+      events.push(makeEvent());
+      eventsSeeded = true;
+    }
     syncNodes();
     if (!running) render();
   }
@@ -225,7 +358,8 @@
       r: M * world.size * scale * (mobile ? 1.16 : 1),
       depth: depth,
       angle: angle,
-      scale: scale
+      scale: scale,
+      spin: orbitalTime * (world.spin || 0.00012)
     };
   }
 
@@ -239,9 +373,11 @@
       var active = hovered === world.id || openId === world.id || document.activeElement === element;
       element.style.left = '0px';
       element.style.top = '0px';
-      element.style.transform = 'translate3d(' + state.x.toFixed(2) + 'px,' + state.y.toFixed(2) + 'px,0) translate(-50%,-50%)';
+      var vx = (state.x - cx) * view.z + cx + view.x;
+      var vy = (state.y - cy) * view.z + cy + view.y;
+      element.style.transform = 'translate3d(' + vx.toFixed(2) + 'px,' + vy.toFixed(2) + 'px,0) translate(-50%,-50%)';
       element.style.zIndex = String(10 + Math.round((state.depth + 1) * 8));
-      element.style.setProperty('--node-r', Math.max(14, state.r).toFixed(1) + 'px');
+      element.style.setProperty('--node-r', Math.max(14, state.r * view.z).toFixed(1) + 'px');
       element.classList.toggle('is-active', !!active);
       if (indexById[world.id]) indexById[world.id].classList.toggle('is-active', !!active);
     });
@@ -272,7 +408,7 @@
       var y = star.y + pointer.y * 11 * star.z;
       if (x < -6 || x > W + 6 || y < -6 || y > H + 6) continue;
       var twinkle = 0.45 + 0.55 * Math.sin(t * 0.0012 * star.z + star.p);
-      var burst = star.z > 0.86 ? Math.pow(Math.max(0, Math.sin(t * 0.00031 + star.p * 2.7)), 14) * (star.z - 0.86) * 6.5 : 0;
+      var burst = !lowPower && star.z > 0.86 ? Math.pow(Math.max(0, Math.sin(t * 0.00031 + star.p * 2.7)), 14) * (star.z - 0.86) * 6.5 : 0;
       var size = star.s * star.z;
       if (burst > 0.03) {
         ctx.fillStyle = rgba(star.c, burst * 0.13);
@@ -313,11 +449,12 @@
 
   function drawCore() {
     var r = M * (mobile ? 0.044 : 0.05);
+    var pulse = 0.5 + 0.5 * Math.sin(t * 0.0006);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     var halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 6);
-    halo.addColorStop(0, 'rgba(160,150,255,0.3)');
-    halo.addColorStop(0.35, 'rgba(90,90,220,0.12)');
+    halo.addColorStop(0, 'rgba(160,150,255,' + (0.26 + pulse * 0.1).toFixed(3) + ')');
+    halo.addColorStop(0.35, 'rgba(90,90,220,' + (0.1 + pulse * 0.04).toFixed(3) + ')');
     halo.addColorStop(1, 'rgba(60,60,180,0)');
     ctx.fillStyle = halo;
     ctx.beginPath();
@@ -334,6 +471,16 @@
       ctx.arc(0, 0, r * (2.1 + k * 0.62), 0, TAU);
       ctx.stroke();
       ctx.restore();
+    }
+    for (var s = 0; s < 5; s++) {
+      var sa = t * 0.00022 * (s % 2 ? -1 : 1) + s * TAU / 5;
+      var sr = r * (2.4 + (s % 3) * 0.44);
+      var sx = cx + Math.cos(sa) * sr;
+      var sy = cy + Math.sin(sa) * sr * 0.42;
+      ctx.fillStyle = rgba(s % 2 ? [130, 215, 255] : [200, 175, 255], 0.35 + pulse * 0.35);
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.max(0.8, r * 0.035) * (0.8 + pulse * 0.5), 0, TAU);
+      ctx.fill();
     }
     ctx.restore();
 
@@ -409,17 +556,17 @@
 
     ctx.globalAlpha = 0.16;
     for (var i = 0; i < 5; i++) {
-      var offset = (i - 2) * r * 0.34 + Math.sin(t * 0.0003 + i + world.seed) * r * 0.05;
+      var offset = (i - 2) * r * 0.34 + Math.sin(state.spin * 2.2 + i + world.seed) * r * 0.05;
       ctx.fillStyle = i % 2 ? rgba(world.argb, 0.55) : 'rgba(255,255,255,0.4)';
       ctx.beginPath();
-      ctx.ellipse(x + Math.sin(t * 0.0002 + i) * r * 0.08, y + offset, r * 1.15, r * (0.08 + i * 0.012), -0.18, 0, TAU);
+      ctx.ellipse(x + Math.sin(state.spin + i) * r * 0.08, y + offset, r * 1.15, r * (0.08 + i * 0.012), -0.18, 0, TAU);
       ctx.fill();
     }
 
     ctx.globalAlpha = 0.5;
     for (var j = 0; j < 7; j++) {
-      var px = x + Math.cos(world.seed + j * 2.1 + t * 0.0002) * r * 0.72;
-      var py = y + Math.sin(world.seed * 1.7 + j * 1.3 + t * 0.00015) * r * 0.72;
+      var px = x + Math.cos(world.seed + j * 2.1 + state.spin * 1.4) * r * 0.72;
+      var py = y + Math.sin(world.seed * 1.7 + j * 1.3 + state.spin * 0.8) * r * 0.72;
       ctx.fillStyle = rgba(world.argb, 0.8);
       ctx.fillRect(px, py, 1.4, 1.4);
     }
@@ -455,7 +602,7 @@
 
     if (world.moons) {
       for (var m = 0; m < 2; m++) {
-        var ma = t * 0.0004 * (m ? -0.7 : 1) + m * 2.4;
+        var ma = state.spin * 2.6 * (m ? -0.7 : 1) + m * 2.4;
         var mx = x + Math.cos(ma) * r * 2.15;
         var my = y + Math.sin(ma) * r * 0.72;
         ctx.save();
@@ -472,7 +619,7 @@
     }
   }
 
-  function drawShopRing(x, y, r, angle, front, highlighted) {
+  function drawShopRing(x, y, r, angle, spin, front, highlighted) {
     var start = front ? 0 : Math.PI;
     var end = front ? Math.PI : TAU;
     ctx.save();
@@ -497,14 +644,14 @@
     ctx.arc(0, 0, r * 1.66, start, end);
     ctx.stroke();
     ctx.setLineDash([Math.max(3, r * 0.13), Math.max(9, r * 0.36)]);
-    ctx.lineDashOffset = -t * 0.012 * (front ? 1 : -1);
+    ctx.lineDashOffset = -spin * 90 * (front ? 1 : -1);
     ctx.strokeStyle = rgba(shopPalette.cyan, front ? (highlighted ? 0.34 : 0.2) : 0.08);
     ctx.lineWidth = Math.max(0.7, r * 0.011);
     ctx.beginPath();
     ctx.arc(0, 0, r * 1.72, start, end);
     ctx.stroke();
     ctx.setLineDash([]);
-    var phase = t * 0.00014;
+    var phase = spin;
     for (var i = 0; i < 8; i++) {
       var a = phase + i * TAU / 8;
       if ((Math.sin(a) >= 0) !== front) continue;
@@ -578,7 +725,7 @@
     ctx.fill();
     ctx.restore();
 
-    drawShopRing(x, y, r, state.angle, false, highlighted);
+    drawShopRing(x, y, r, state.angle, state.spin, false, highlighted);
 
     ctx.save();
     ctx.beginPath();
@@ -594,9 +741,9 @@
     ctx.fillStyle = body;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
 
-    var drift = Math.sin(t * 0.00016) * r * 0.025;
+    var drift = Math.sin(state.spin * 1.4) * r * 0.025;
     ctx.globalCompositeOperation = 'lighter';
-    var sweep = Math.sin(t * 0.00026) * r * 0.6;
+    var sweep = Math.sin(state.spin * 2.2) * r * 0.6;
     var sheen = ctx.createLinearGradient(x + sweep - r * 0.4, y - r, x + sweep + r * 0.4, y + r);
     sheen.addColorStop(0, rgba(shopPalette.ice, 0));
     sheen.addColorStop(0.5, rgba(shopPalette.ice, highlighted ? 0.1 : 0.055));
@@ -607,7 +754,7 @@
       var land = shopLand[i];
       var depth = Math.sqrt(Math.max(0, 1 - land.x * land.x - land.y * land.y));
       var lx = x + land.x * r + drift * (i % 2 ? 1 : -1);
-      var ly = y + land.y * r + Math.cos(t * 0.00013 + i) * r * 0.012;
+      var ly = y + land.y * r + Math.cos(state.spin + i) * r * 0.012;
       var landColor = land.gold ? shopPalette.gold : shopPalette.cyan;
       ctx.globalAlpha = 0.2 + depth * 0.26 + (highlighted ? 0.12 : 0);
       ctx.fillStyle = rgba(landColor, 1);
@@ -667,7 +814,7 @@
       var item = shopParcels[q];
       var pd = Math.sqrt(Math.max(0, 1 - item.x * item.x - item.y * item.y));
       var px = x + item.x * r + drift * 0.5;
-      var py = y + item.y * r + Math.sin(t * 0.00022 + q) * r * 0.01;
+      var py = y + item.y * r + Math.sin(state.spin * 1.6 + q) * r * 0.01;
       drawShopParcel(px, py, r * item.s * (0.62 + pd * 0.38), item.a, 0.35 + pd * 0.45 + (highlighted ? 0.14 : 0));
     }
 
@@ -699,12 +846,12 @@
     }
     ctx.restore();
 
-    drawShopRing(x, y, r, state.angle, true, highlighted);
+    drawShopRing(x, y, r, state.angle, state.spin, true, highlighted);
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (var m = 0; m < 3; m++) {
-      var ma = t * 0.00011 * (m === 1 ? -0.78 : 1) + m * 2.2;
+      var ma = state.spin * (m === 1 ? -0.78 : 1) + m * 2.2;
       var mx = x + Math.cos(ma) * r * 2.15;
       var my = y + Math.sin(ma) * r * 0.72;
       ctx.fillStyle = rgba(m === 1 ? shopPalette.gold : shopPalette.cyan, 0.22);
@@ -758,6 +905,7 @@
     if (!ctx) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.save();
+    applyView();
     if (warp) {
       var zoom = 1 + warpProgress * 3.6;
       ctx.translate(warp.x, warp.y);
@@ -767,6 +915,7 @@
     drawBackground();
     drawStars();
     drawSpiral();
+    drawPointerAura();
     ctx.save();
     ctx.translate(pointer.x * 12, pointer.y * 8);
     drawCore();
@@ -779,6 +928,7 @@
     });
     drawDust();
     ctx.restore();
+    drawEvents();
     if (warp) drawStreaks();
     ctx.restore();
     if (ui && !coarse) {
@@ -798,6 +948,8 @@
     var pointerEase = 1 - Math.pow(0.945, rawDelta / 16.67);
     pointer.x += (pointer.tx - pointer.x) * pointerEase;
     pointer.y += (pointer.ty - pointer.y) * pointerEase;
+    updateView(rawDelta);
+    updateEvents(delta);
     if (warp) {
       warpProgress = Math.min(1, (now - warp.start) / 900);
       if (warpProgress >= 1) {
@@ -923,6 +1075,50 @@
   stage.addEventListener('pointerleave', function () {
     pointer.tx = 0;
     pointer.ty = 0;
+  });
+
+  function endDrag(event) {
+    if (!drag || drag.id !== event.pointerId) return;
+    drag = null;
+    stage.classList.remove('is-dragging');
+    if (stage.releasePointerCapture) {
+      try { stage.releasePointerCapture(event.pointerId); } catch (error) { return; }
+    }
+  }
+
+  stage.addEventListener('pointerdown', function (event) {
+    if (reduce || coarse || event.button !== 0) return;
+    if (event.target.closest && event.target.closest('a,button,.galaxy-intro,.galaxy-index,.world-detail')) return;
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    if (stage.setPointerCapture) {
+      try { stage.setPointerCapture(event.pointerId); } catch (error) { return; }
+    }
+    stage.classList.add('is-dragging');
+  });
+
+  window.addEventListener('pointermove', function (event) {
+    if (!drag || drag.id !== event.pointerId) return;
+    var dx = event.clientX - drag.x;
+    var dy = event.clientY - drag.y;
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    view.tx = clamp(view.tx + dx, -W * 0.12, W * 0.12);
+    view.ty = clamp(view.ty + dy, -H * 0.1, H * 0.1);
+  }, { passive: true });
+
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+
+  stage.addEventListener('wheel', function (event) {
+    if (reduce || coarse) return;
+    if (event.target.closest && event.target.closest('.galaxy-index,.galaxy-intro,.world-detail')) return;
+    event.preventDefault();
+    view.tz = clamp(view.tz - event.deltaY * 0.00025, 0.88, 1.18);
+  }, { passive: false });
+
+  stage.addEventListener('dblclick', function (event) {
+    if (event.target.closest && event.target.closest('a,button,.galaxy-intro,.galaxy-index,.world-detail')) return;
+    resetView();
   });
 
   var resizeTimer = 0;

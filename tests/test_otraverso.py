@@ -258,6 +258,26 @@ class OtraversoTests(unittest.TestCase):
             self.assertIn("/static/css/play.css", body)
             self.assertIn("/static/js/universe-core.js", body)
             self.assertIn("/static/js/play.js", body)
+
+    def test_13_living_galaxy_enhancements(self) -> None:
+        status, _, body = Client().call("/")
+        self.assertTrue(status.startswith("200"))
+        for marker in ('class="galaxy-stage"', 'data-world="shop"', 'data-warp'):
+            self.assertIn(marker, body)
+        for absent in ('data-camera=', 'explore-object', 'data-discovery-progress', 'class="skip-link"'):
+            self.assertNotIn(absent, body)
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
+        js = (root / "app/static/js/galaxy.js").read_text(encoding="utf-8")
+        self.assertIn("cursor:grab", css)
+        self.assertIn(".galaxy-stage.is-dragging", css)
+        for marker in (
+            "spin: 0.00011", "spin: 0.00017", "function makeEvent", "function updateEvents",
+            "function drawEvents", "function applyView", "function updateView", "function resetView",
+            "function drawPointerAura", "lowPower ? 2 : 5", "addEventListener('pointerdown'",
+            "addEventListener('wheel'", "dblclick", "state.spin",
+        ):
+            self.assertIn(marker, js)
             self.assertNotIn("/static/js/vendor/three.min.js", body)
         enabled = {row["code"] for row in query("SELECT code FROM modules WHERE enabled=1")}
         self.assertEqual(enabled, {"portal", "shop"})
