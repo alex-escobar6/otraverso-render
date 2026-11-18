@@ -85,7 +85,9 @@ def _world_node(module, meta: dict) -> str:
     href = "/shop" if code == "shop" else f"/{code}"
     action = "data-warp" if enabled else f'data-dialog="{esc(code)}"'
     tag = "a" if enabled else "button"
-    extra = f'href="{href}"' if enabled else 'type="button" aria-haspopup="dialog"'
+    extra = f'href="{href}"' if enabled else (
+        f'type="button" aria-haspopup="dialog" aria-controls="detail-{esc(code)}" aria-expanded="false"'
+    )
     target = f' title="Abrir {name}"' if enabled else ""
     return f"""
     <{tag} class="world-node world-node--{esc(code)}" data-world="{esc(code)}" {action} {extra}
@@ -106,16 +108,16 @@ def _world_dialog(module, meta: dict) -> str:
     code = module["code"]
     name = esc(module["name"])
     return f"""
-    <div class="world-detail" data-dialog="{esc(code)}" hidden role="dialog" aria-modal="true"
-         aria-labelledby="detail-title-{esc(code)}">
-      <div class="world-detail__backdrop" data-close></div>
+    <div class="world-detail" id="detail-{esc(code)}" data-dialog="{esc(code)}" hidden role="dialog" aria-modal="true"
+         aria-labelledby="detail-title-{esc(code)}" aria-describedby="detail-body-{esc(code)} detail-note-{esc(code)}">
+      <div class="world-detail__backdrop" data-close aria-hidden="true"></div>
       <div class="world-detail__card" style="--detail-color:{esc(meta['color'])};--detail-accent:{esc(meta['accent'])}">
         <button class="world-detail__close" type="button" data-close aria-label="Cerrar presentación">×</button>
         <span class="world-detail__eyebrow">UNIVERSO {esc(meta['order'])} · PRÓXIMAMENTE</span>
         <h2 id="detail-title-{esc(code)}">{name}</h2>
         <p class="world-detail__tagline">{esc(meta['tagline'])}</p>
-        <p class="world-detail__body">{esc(meta['detail'])}</p>
-        <p class="world-detail__note">Estado: Planeado. Sin funcionalidades activas ni módulos accesibles.</p>
+        <p class="world-detail__body" id="detail-body-{esc(code)}">{esc(meta['detail'])}</p>
+        <p class="world-detail__note" id="detail-note-{esc(code)}">Estado: Planeado. Sin funcionalidades activas ni módulos accesibles.</p>
         <a class="world-detail__link" href="/universos/{esc(code)}">Ver dossier del universo <i aria-hidden="true">→</i></a>
       </div>
     </div>"""
@@ -127,7 +129,8 @@ def _index_item(module, meta: dict) -> str:
     enabled = bool(module["enabled"])
     action = f'href="/shop" data-warp data-index="{esc(code)}"' if enabled and code == "shop" else (
         f'href="/{code}" data-index="{esc(code)}"' if enabled else
-        f'type="button" data-dialog="{esc(code)}" data-index="{esc(code)}"'
+        (f'type="button" data-dialog="{esc(code)}" data-index="{esc(code)}" '
+         f'aria-haspopup="dialog" aria-controls="detail-{esc(code)}" aria-expanded="false"')
     )
     tag = "a" if enabled else "button"
     return f'<{tag} class="galaxy-index__item" {action} style="--dot:{esc(meta["color"])}">' \
