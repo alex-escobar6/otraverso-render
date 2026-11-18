@@ -231,20 +231,26 @@ class OtraversoTests(unittest.TestCase):
             self.assertTrue(status.startswith("200"), f"{path}: {status}")
             self.assertNotIn("Ocurrió un error inesperado", body)
 
-    def test_12_original_galaxy_and_play_preserved(self) -> None:
+    def test_12_pregit_canvas_galaxy_and_play_preserved(self) -> None:
         client = Client()
         status, _, body = client.call("/")
         self.assertTrue(status.startswith("200"))
-        self.assertIn('class="galaxy-stage no-webgl"', body)
-        self.assertIn('data-loader', body)
+        self.assertIn('class="galaxy-stage"', body)
+        self.assertNotIn('data-loader', body)
         for world in ("shop", "whatif", "play", "labs"):
             self.assertIn(f'data-world="{world}"', body)
-        self.assertIn("/static/js/vendor/three.min.js", body)
+        self.assertIn('href="/shop" data-warp', body)
         self.assertIn("/static/js/galaxy.js", body)
-        self.assertNotIn("Calibrando portales", body)
+        self.assertNotIn("/static/js/vendor/three.min.js", body)
+        self.assertNotIn("Calibrando telescopio", body)
         self.assertNotIn('data-scene="hub"', body)
-        css = (Path(__file__).resolve().parents[1] / "app/static/css/galaxy.css").read_text(encoding="utf-8")
-        self.assertIn("galaxy-loader-failsafe", css)
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
+        js = (root / "app/static/js/galaxy.js").read_text(encoding="utf-8")
+        self.assertIn("warp-flash .95s", css)
+        self.assertIn("getContext('2d'", js)
+        self.assertIn("warpProgress", js)
+        self.assertIn("window.location.assign(href)", js)
         for path, marker in (("/play", "NEXUS RUSH"), ("/play/nexus-rush", "data-game-result")):
             status, _, body = client.call(path)
             self.assertTrue(status.startswith("200"), path)
