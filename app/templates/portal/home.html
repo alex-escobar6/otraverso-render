@@ -1,14 +1,7 @@
-<section class="galaxy-stage no-webgl" id="galaxia" aria-label="Explorador galáctico de universos OTRAVERSO">
+<section class="galaxy-stage" id="galaxia" aria-label="Explorador de universos OTRAVERSO">
   <canvas class="galaxy-canvas" aria-hidden="true"></canvas>
   <div class="galaxy-atmosphere" aria-hidden="true"></div>
   <div class="galaxy-flash" aria-hidden="true"></div>
-
-  <div class="galaxy-loader" data-loader role="status" aria-live="polite">
-    <div class="galaxy-loader__mark" aria-hidden="true">O<span>/</span></div>
-    <p class="galaxy-loader__kicker">OTRAVERSO · SISTEMA MULTIVERSAL</p>
-    <div class="galaxy-loader__track"><span class="galaxy-loader__bar" data-loader-bar></span></div>
-    <p class="galaxy-loader__status" data-loader-status>Calibrando telescopio…</p>
-  </div>
 
   <div class="galaxy-ui">
     <header class="galaxy-intro">
@@ -16,31 +9,14 @@
       <h1>NO EXISTE UN SOLO UNIVERSO.<br><strong>EXPLORA LOS DEMÁS.</strong></h1>
       <p class="galaxy-lead">$HERO_TITLE</p>
       <p class="galaxy-sub">$HERO_SUBTITLE</p>
-      <p class="galaxy-description">Un espacio donde descubrir, imaginar, jugar y experimentar.</p>
       <div class="galaxy-actions">
         <a class="galaxy-primary" href="/shop" data-warp>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
-        <a class="galaxy-secondary" href="#indice-universos" data-show-universes>VER UNIVERSOS <i aria-hidden="true">↓</i></a>
+        <a class="galaxy-secondary" href="#indice-universos">VER UNIVERSOS <i aria-hidden="true">↓</i></a>
       </div>
-      <p class="galaxy-hint">Explora con el cursor · Toca un mundo para descubrirlo</p>
+      <p class="galaxy-hint">Mueve el cursor para explorar la galaxia · Selecciona un mundo</p>
     </header>
 
-    <aside class="galaxy-dossier" data-dossier hidden aria-live="polite">
-      <p class="galaxy-dossier__eyebrow" data-dossier-state></p>
-      <h2 data-dossier-name></h2>
-      <p class="galaxy-dossier__tagline" data-dossier-tagline></p>
-      <p class="galaxy-dossier__text" data-dossier-description></p>
-      <a class="galaxy-dossier__cta" href="/shop" data-dossier-cta data-warp hidden>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
-      <button class="galaxy-dossier__cta" type="button" data-dossier-dialog data-dialog hidden>VER PRESENTACIÓN <i aria-hidden="true">→</i></button>
-    </aside>
-
     <div class="galaxy-worlds">$WORLD_NODES</div>
-
-    <div class="galaxy-controls" role="group" aria-label="Controles del recorrido cinematográfico">
-      <button class="galaxy-control" type="button" data-tour-toggle aria-label="Pausar recorrido">❚❚ <span>PAUSAR</span></button>
-      <button class="galaxy-control" type="button" data-tour-skip aria-label="Saltar presentación">↷ <span>SALTAR</span></button>
-      <button class="galaxy-control" type="button" data-tour-overview aria-label="Volver a la vista general">⌂ <span>VISTA GENERAL</span></button>
-      <div class="galaxy-tour-track" aria-hidden="true"><span data-tour-progress></span></div>
-    </div>
 
     <nav class="galaxy-index" id="indice-universos" aria-label="Índice de universos">
       <span class="galaxy-index__label">UNIVERSOS</span>
@@ -50,13 +26,3 @@
 </section>
 
 $WORLD_DIALOGS
-
-<noscript>
-  <section class="section">
-    <div class="container pages-content">
-      <h2>Explora los universos</h2>
-      <p><a href="/shop">OTRAVERSO SHOP — disponible</a></p>
-      <p><a href="/universos/whatif">WHAT IF — próximamente</a> · <a href="/universos/play">PLAY — próximamente</a> · <a href="/universos/labs">LABS — próximamente</a></p>
-    </div>
-  </section>
-</noscript>

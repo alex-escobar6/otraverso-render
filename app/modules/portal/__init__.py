@@ -7,10 +7,10 @@ from app.db import query, settings_group
 
 UNIVERSE_COPY = {
     "portal": ("Universo central", "El acceso a una plataforma diseñada para crecer por módulos.", "#6d5cff"),
-    "shop": ("Descubrimiento comercial", "Descubre cosas que no sabías que necesitabas. Productos reales, inventario y pedidos especiales.", "#8b5cf6"),
-    "whatif": ("Imaginación y posibilidades", "¿Y si todo pudiera ser diferente? Portales y realidades alternativas en diseño.", "#8b7cff"),
-    "play": ("Entretenimiento", "El siguiente nivel comienza aquí. Un mundo lúdico en conceptualización.", "#f472b6"),
-    "labs": ("Innovación", "Experimenta. Crea. Evoluciona. Prototipos y herramientas en desarrollo.", "#2dd4bf"),
+    "shop": ("Comercio local y global", "Productos en inventario y bajo pedido, con información clara de plazos.", "#8b5cf6"),
+    "whatif": ("Inteligencia narrativa", "Historias extensas, escenarios y mundos alternativos. En planeación.", "#ffb347"),
+    "play": ("Juegos y entretenimiento", "Experiencias lúdicas propias. En planeación.", "#f472b6"),
+    "labs": ("Experimentos", "Herramientas y pruebas independientes. En planeación.", "#60a5fa"),
 }
 
 UNIVERSE_META = {
@@ -19,26 +19,26 @@ UNIVERSE_META = {
         "short": "SHOP",
         "tagline": "Descubre cosas que no sabías que necesitabas",
         "cta": "EXPLORAR SHOP",
-        "status": "DISPONIBLE",
+        "status": "ACTIVO",
         "index_status": "Activo",
         "color": "#8b5cf6",
         "accent": "#54e8ff",
-        "x": "76%",
-        "y": "42%",
+        "x": "79%",
+        "y": "43%",
         "detail": "Productos reales en inventario y bajo pedido, con entregas en Nariño y compras confirmadas por WhatsApp.",
     },
     "whatif": {
         "order": "02",
         "short": "WHAT IF",
-        "tagline": "¿Y si todo pudiera ser diferente?",
+        "tagline": "Imagina lo imposible. Descubre qué pasaría si...",
         "cta": "VER PRESENTACIÓN",
         "status": "PRÓXIMAMENTE",
         "index_status": "Planeado",
-        "color": "#8b7cff",
-        "accent": "#c4b5fd",
-        "x": "36%",
-        "y": "27%",
-        "detail": "Un universo de portales, posibilidades y realidades alternativas actualmente en diseño.",
+        "color": "#ffb347",
+        "accent": "#ffd89b",
+        "x": "55%",
+        "y": "26%",
+        "detail": "Un universo de historias, inteligencia artificial y escenarios alternativos actualmente en diseño.",
     },
     "play": {
         "order": "03",
@@ -48,10 +48,10 @@ UNIVERSE_META = {
         "status": "PRÓXIMAMENTE",
         "index_status": "Planeado",
         "color": "#f472b6",
-        "accent": "#67e8f9",
-        "x": "78%",
-        "y": "68%",
-        "detail": "Un mundo de entretenimiento y experiencias lúdicas propias en etapa de conceptualización.",
+        "accent": "#7dd3fc",
+        "x": "73%",
+        "y": "66%",
+        "detail": "Un mundo de entretenimiento y videojuegos propios en etapa de conceptualización.",
     },
     "labs": {
         "order": "04",
@@ -60,11 +60,11 @@ UNIVERSE_META = {
         "cta": "VER PRESENTACIÓN",
         "status": "PRÓXIMAMENTE",
         "index_status": "Planeado",
-        "color": "#2dd4bf",
-        "accent": "#60a5fa",
-        "x": "34%",
-        "y": "65%",
-        "detail": "Una dimensión de prototipos, circuitos y herramientas tecnológicas en desarrollo.",
+        "color": "#60a5fa",
+        "accent": "#5eead4",
+        "x": "43%",
+        "y": "62%",
+        "detail": "Una dimensión de prototipos, herramientas y estructuras tecnológicas en desarrollo.",
     },
 }
 
@@ -88,14 +88,11 @@ def _world_node(module, meta: dict) -> str:
     extra = f'href="{href}"' if enabled else 'type="button" aria-haspopup="dialog"'
     target = f' title="Abrir {name}"' if enabled else ""
     return f"""
-    <{tag} class="world-node world-node--{esc(code)}" data-world="{esc(code)}" data-order="{order}"
-      data-tagline="{tagline}" data-description="{esc(meta['detail'])}" data-status="{esc(meta['status'])}"
-      {action} {extra}
+    <{tag} class="world-node world-node--{esc(code)}" data-world="{esc(code)}" {action} {extra}
       style="--node-color:{color};--node-accent:{accent};--fallback-x:{meta['x']};--fallback-y:{meta['y']}"
       aria-label="{name}: {tagline}"{target}>
       <span class="world-node__orbit" aria-hidden="true"></span>
       <span class="world-node__core" aria-hidden="true"></span>
-      <span class="world-node__marker" aria-hidden="true"></span>
       <span class="world-node__info">
         <span class="world-node__state">UNIVERSO {order} · <em>{esc(meta['status'])}</em></span>
         <strong>{name}</strong>
@@ -166,8 +163,7 @@ def home(request: Request) -> Response:
         active="portal",
         request=request,
         head_extra='<link rel="stylesheet" href="/static/css/galaxy.css">',
-        scripts=('<script src="/static/js/vendor/three.min.js" defer></script>'
-                 '<script src="/static/js/galaxy.js" defer></script>'),
+        scripts='<script src="/static/js/galaxy.js" defer></script>',
     ))
 
 
