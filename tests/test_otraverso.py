@@ -231,6 +231,20 @@ class OtraversoTests(unittest.TestCase):
             self.assertTrue(status.startswith("200"), f"{path}: {status}")
             self.assertNotIn("Ocurrió un error inesperado", body)
 
+    def test_12_play_universe_and_nexus_rush(self) -> None:
+        client = Client()
+        status, _, body = client.call("/")
+        self.assertTrue(status.startswith("200"))
+        self.assertIn('data-portal="play"', body)
+        self.assertIn("/static/js/nexus-rush.js", body)
+        for path, marker in (("/play", "NEXUS RUSH"), ("/play/nexus-rush", "data-game-result")):
+            status, _, body = client.call(path)
+            self.assertTrue(status.startswith("200"), path)
+            self.assertIn(marker, body)
+            self.assertIn("/static/js/universe-core.js", body)
+        enabled = {row["code"] for row in query("SELECT code FROM modules WHERE enabled=1")}
+        self.assertEqual(enabled, {"portal", "shop"})
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

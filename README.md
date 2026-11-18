@@ -2,11 +2,12 @@
 
 Plataforma digital modular con identidad propia. La primera versión funcional es **OTRAVERSO SHOP**: tienda de productos novedosos con inventario real, productos bajo pedido, cobertura en Nariño y solicitudes de compra por WhatsApp persistentes.
 
-Los universos **WHAT IF**, **PLAY** y **LABS** están declarados y visibles como planeados, sin funcionalidades activas ni datos simulados.
+**OTRAVERSO PLAY** está disponible con `NEXUS RUSH`, un juego de carreras 3D con tres circuitos. **WHAT IF** y **LABS** siguen declarados como planeados, sin funcionalidades activas ni datos simulados.
 
 ## Estado
 
-- Portada OTRAVERSO y navegación por universos.
+- Hub 3D OTRAVERSO con ciudad flotante, portales dimensionales y transiciones con continuidad.
+- PLAY: `/play` y `/play/nexus-rush` con NEXUS RUSH (tres circuitos, turbo, obstáculos, energía, récord local y audio procedural).
 - SHOP: inicio, catálogo con filtros y búsqueda, categorías, ficha de producto, cobertura y páginas informativas.
 - Modalidades: `stock` (inventario real) y `order` (bajo pedido/importación), claramente diferenciadas.
 - WhatsApp: antes de abrir el chat se persisten cliente, solicitud, mensaje y clic; abrir el chat **no** confirma una venta.
@@ -51,10 +52,10 @@ Si no se definen credenciales, `init_db.py` genera un administrador temporal y l
 ```text
 app/
   core/       HTTP/WSGI, sesiones, CSRF, render, errores
-  modules/    portal, shop, admin
+  modules/    portal, play, shop, admin
   services/   catálogo, inventario, pedidos, WhatsApp, cobertura, analítica
   templates/  HTML por universo y panel
-  static/     CSS y JS propios
+   static/     CSS y JS propios; Three.js r149 local y motores universe-core/galaxy/nexus-rush
   config.py   Variables de entorno
   db.py       Esquema, migraciones y semilla
   security.py Hash, tokens y saneamiento
@@ -71,6 +72,10 @@ tests/        Suite de integración con BD temporal
 - La BD real no contiene productos de ejemplo. Las pruebas usan una base temporal.
 - No hay pago en línea: la solicitud se concreta y confirma por WhatsApp con el vendedor.
 - Registros de visitas, eventos y auditoría se escriben en la misma BD para consultas reales del panel.
+- El módulo `play` permanece deshabilitado en la tabla `modules`; sus rutas son públicas y no alteran esquema ni semilla.
+- Los récords de NEXUS RUSH se guardan en `localStorage` del navegador (`otraverso.nexus.best.v1`).
+- Controles de NEXUS RUSH: flechas/WASD, Espacio turbo, Shift salto, P pausa, R reiniciar, Esc salir; también hay controles táctiles.
+- El audio se genera con WebAudio desde código; no hay archivos de audio ni licencias externas.
 
 ## Documentación
 

@@ -8,6 +8,12 @@ Ruta: /home/sistemas/otraverso
 4) python3 scripts/serve.py
 
 Abrir en el navegador: http://127.0.0.1:8000
+- Hub 3D:        http://127.0.0.1:8000/
+- Tienda:        http://127.0.0.1:8000/shop
+- NEXUS RUSH:    http://127.0.0.1:8000/play
+
+Controles del juego: flechas/WASD, Espacio turbo, Shift salto,
+P pausa, R reiniciar, Esc volver. Tambien hay botones tactiles.
 
 Nota: si no pones credenciales en .env, init_db.py crea un admin temporal en
 data/bootstrap_admin.txt (cámbialo tras el primer ingreso).

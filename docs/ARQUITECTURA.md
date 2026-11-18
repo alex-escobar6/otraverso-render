@@ -11,7 +11,7 @@ Universos actuales:
 | `portal` | Activo |
 | `shop` | Activo |
 | `whatif` | Planeado, sin funcionalidades activas |
-| `play` | Planeado, sin funcionalidades activas |
+| `play` | Activo mediante rutas públicas `/play` y `/play/nexus-rush`; el flag de BD sigue deshabilitado |
 | `labs` | Planeado, sin funcionalidades activas |
 
 ## Capas
@@ -21,7 +21,16 @@ Universos actuales:
 3. **Presentación** (`app/core/render.py`, `app/templates`, `app/static`): plantillas `string.Template`, escape HTML, navegación, footer y metadatos SEO.
 4. **Dominio** (`app/services`): catálogo, inventario, pedidos, cobertura, WhatsApp y analítica.
 5. **Persistencia** (`app/db.py`): SQLite WAL, esquema versionado (`PRAGMA user_version`), semilla idempotente y auditoría.
-6. **Módulos** (`app/modules`): `portal`, `shop` y `admin` registran rutas en el router.
+6. **Módulos** (`app/modules`): `portal`, `play`, `shop` y `admin` registran rutas en el router.
+7. **Universo 3D** (`app/static`): Three.js r149 local, `universe-core.js` (renderer, input, audio, transiciones), `galaxy.js` (hub) y `nexus-rush.js` (PLAY y juego).
+
+## Hub dimensional y NEXUS RUSH
+
+La portada `/` renderiza un hub 3D con ciudad flotante y cuatro portales. Los portales de SHOP y PLAY usan `history.pushState`/navegación real tras una transición de warp; WHAT IF y LABS abren un dossier porque siguen planeados. Las tres páginas 3D comparten los mismos paneles y el atributo `data-scene` decide qué interfaz se muestra, permitiendo transiciones sin recargar la escena.
+
+`NEXUS RUSH` se construye con geometría procedural: tres curvas `CatmullRomCurve3`, nave antigravedad, obstáculos, pickups, turbo, salto, temporizador, puntos y récord por circuito en `localStorage`. El audio es síntesis WebAudio generada en código. El núcleo aplica calidad según dispositivo, limita DPR, pausa al ocultar la pestaña, libera geometrías/materials al cambiar de escena y ofrece fallback accesible sin WebGL.
+
+¿Cómo agregar otro universo? Crear el módulo con `register(router)`, la plantilla con `data-universe-root` y `data-scene`, un factory registrado con `OTRAVERSO.registerScene(nombre, factory)`, sus scripts y estilos, y añadir el destino al hub. Los universos planeados no deben exponer enlaces a funciones inexistentes: usan dossier real en `/universos/{code}`.
 
 ## Flujo de una solicitud
 

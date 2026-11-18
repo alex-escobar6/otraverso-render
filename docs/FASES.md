@@ -1,6 +1,6 @@
 # Fases de OTRAVERSO
 
- Estado actual: **Fases 1 a 6 completadas** para la primera versión funcional de SHOP.
+  Estado actual: **Fases 1 a 7 completadas**. SHOP funcional y PLAY con NEXUS RUSH disponible.
 
 | Fase | Objetivo | Resultado |
 | --- | --- | --- |
@@ -10,6 +10,7 @@
 | 4 | Panel administrativo | 90 rutas con RBAC para productos, inventario, pedidos, solicitudes, clientes, marketing, cobertura, configuración, analítica, usuarios, auditoría y backups. |
 | 5 | Pruebas | 11 pruebas de integración sobre BD temporal: esquema, portal, tienda, CSRF, RBAC, CRUD, stock, pedidos, WhatsApp, conversión y render de todas las páginas admin. |
 | 6 | Entrega | README, documentación, `.env.example`, `.gitignore`, scripts de backup/restore/create_admin y verificación final. |
+| 7 | Universo 3D y PLAY | Hub dimensional con portales, transiciones 3D, SHOP conectado, PLAY y NEXUS RUSH con tres circuitos, audio procedural, récord local, calidad adaptativa y fallback. |
 
 ## Criterios cumplidos
 
@@ -24,7 +25,7 @@
 ## Fuera de alcance de esta entrega
 
 - Pasarelas de pago o checkout automático.
-- Funcionalidades reales de WHAT IF, PLAY o LABS.
+- Funcionalidades reales de WHAT IF y LABS (PLAY ya tiene NEXUS RUSH).
 - Autenticación pública de clientes o áreas de usuario.
 - Notificaciones automáticas hacia WhatsApp; el envío lo ejecuta el vendedor desde el chat generado.
 - Despliegue con gunicorn/nginx incluido como servicio del sistema; se documenta la integración, pero no se instalaron esos paquetes porque no están disponibles en el entorno.
