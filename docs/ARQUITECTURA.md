@@ -22,15 +22,15 @@ Universos actuales:
 4. **Dominio** (`app/services`): catálogo, inventario, pedidos, cobertura, WhatsApp y analítica.
 5. **Persistencia** (`app/db.py`): SQLite WAL, esquema versionado (`PRAGMA user_version`), semilla idempotente y auditoría.
 6. **Módulos** (`app/modules`): `portal`, `play`, `shop` y `admin` registran rutas en el router.
-7. **Galaxia original** (`app/static`): `three.min.js` + `galaxy.js` renderizan planetas con shaders, órbitas, estrellas y nebulosas; `galaxy.css` aporta el fallback CSS, `play.css`/`play.js`/`universe-core.js`/`nexus-rush.js` conservan PLAY y el juego con carga diferida.
+7. **Galaxia pre-Git** (`app/static`): `galaxy.js` dibuja en Canvas 2D planetas, órbitas, estrellas y nebulosas; `galaxy.css` aporta el escenario y el flash de viaje, `play.css`/`play.js`/`universe-core.js`/`nexus-rush.js` conservan PLAY y el juego con carga diferida.
 
-## Galaxia original y NEXUS RUSH
+## Galaxia pre-Git y NEXUS RUSH
 
-La portada `/` recupera la implementación de `f97502a`: un escenario WebGL con estrellas, disco galáctico, nebulosas, cuatro planetas con shaders propios, atmósferas, anillos, lunas y recorrido cinematográfico automático. Al seleccionar SHOP, `galaxy.js` aumenta el brillo del planeta, enfoca la cámara, atraviesa el acceso con un portal y navega a `/shop` tras 1,75 s. Los universos planeados abren su dossier sin enlazar rutas inexistentes.
+La portada `/` recupera la implementación del 17 de noviembre guardada en el historial local de OpenCode, anterior a la instalación de Git. Es un único canvas 2D con fondo oscuro, nebulosa generada offscreen, estrellas, brazos espirales, polvo y cuatro planetas con colores propios que orbitan de forma continua con paralaje del cursor. Al seleccionar SHOP, `galaxy.js` toma la posición del planeta, aplica un zoom de hasta `4.6x`, dibuja estelas radiales y, tras 900 ms con flash CSS, navega a `/shop`. Los universos planeados abren su tarjeta de presentación sin enlazar rutas inexistentes.
 
-La galaxia mantiene un único renderer, reduce partículas/segmentos/DPR/bloom, desactiva antialias, pausa `requestAnimationFrame` con la pestaña oculta o fuera de pantalla y libera recursos en `pagehide`/pérdida de contexto. La plantilla arranca con `no-webgl`: si Three.js o WebGL fallan, el JS conserva el fallback CSS y el loader se oculta por JS (5 s) y por animación CSS (6 s), sin pantallas infinitas.
+No hay loader ni dependencia de Three.js/WebGL: la escena dibuja desde el primer render. El bucle usa un solo `requestAnimationFrame`, limita partículas y DPR, respeta `prefers-reduced-motion` y pausa cuando la pestaña está oculta. La versión WebGL posterior queda conservada sin mezclarse en la etiqueta `backup/webgl-galaxy-20261118`.
 
-`nexus-rush.js` no se solicita al entrar en PLAY: se inyecta al iniciar un circuito, con timeout de 8 s y barra de error/reintento. El juego usa un único canvas 2D con carretera proyectada, curvas, obstáculos, pickups, turbo, salto, temporizador, puntos y récord por circuito en `localStorage`. El audio es síntesis WebAudio por eventos. PLAY usa `play.css` y `play.js` para no mezclar sus estilos y controles con la galaxia restaurada.
+`nexus-rush.js` no se solicita al entrar en PLAY: se inyecta al iniciar un circuito, con timeout de 8 s y barra de error/reintento. El juego usa un único canvas 2D con carretera proyectada, curvas, obstáculos, pickups, turbo, salto, temporizador, puntos y récord por circuito en `localStorage`. El audio es síntesis WebAudio por eventos. PLAY usa `play.css` y `play.js` para no mezclar sus estilos y controles con la galaxia pre-Git.
 
 ¿Cómo agregar otro universo? Añadir metadatos en `UNIVERSE_META`, generar su nodo/índice/dossier en `app/modules/portal/__init__.py` y crear una ruta real solo si estará disponible. Los universos planeados usan `/universos/{code}`.
 

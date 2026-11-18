@@ -6,7 +6,7 @@ Plataforma digital modular con identidad propia. La primera versión funcional e
 
 ## Estado
 
-- Galaxia original restaurada: Three.js/WebGL con planetas animados, órbitas, nebulosas y viaje cinematográfico a SHOP; fallback CSS si WebGL no está disponible.
+- Galaxia pre-Git restaurada: Canvas 2D sin dependencias 3D, planetas animados, órbitas, nebulosas y viaje cinematográfico a SHOP sin loader. La versión WebGL queda conservada en la etiqueta `backup/webgl-galaxy-20261118`.
 - PLAY: `/play` y `/play/nexus-rush` con NEXUS RUSH (tres circuitos, turbo, obstáculos, energía, récord local y audio procedural).
 - SHOP: inicio, catálogo con filtros y búsqueda, categorías, ficha de producto, cobertura y páginas informativas.
 - Modalidades: `stock` (inventario real) y `order` (bajo pedido/importación), claramente diferenciadas.
@@ -55,7 +55,7 @@ app/
   modules/    portal, play, shop, admin
   services/   catálogo, inventario, pedidos, WhatsApp, cobertura, analítica
   templates/  HTML por universo y panel
-   static/     galaxy.css/galaxy.js + three.min.js (galaxia original), play.css/play.js/universe-core.js/nexus-rush.js (PLAY)
+   static/     galaxy.css/galaxy.js (galaxia pre-Git Canvas 2D), play.css/play.js/universe-core.js/nexus-rush.js (PLAY)
   config.py   Variables de entorno
   db.py       Esquema, migraciones y semilla
   security.py Hash, tokens y saneamiento
@@ -76,8 +76,8 @@ tests/        Suite de integración con BD temporal
 - Los récords de NEXUS RUSH se guardan en `localStorage` del navegador (`otraverso.nexus.best.v1`).
 - Controles de NEXUS RUSH: flechas/WASD, Espacio turbo, Shift salto, P pausa, R reiniciar, Esc salir; también hay controles táctiles.
 - El audio se genera con WebAudio desde código; no hay archivos de audio ni licencias externas.
-- La portada usa la galaxia original con Three.js; se limitan partículas, segmentos, DPR y bloom, y se pausa al ocultar la pestaña.
-- El loader tiene apagado automático por JS y por CSS; si falla WebGL aparece la galaxia de respaldo en CSS.
+- La portada usa un único canvas 2D sin Three.js: limita partículas/DPR, respeta `prefers-reduced-motion` y pausa al ocultar la pestaña.
+- No existe loader: la galaxia dibuja desde el primer render y SHOP navega tras un acercamiento de 900 ms con estelas y flash.
 - `nexus-rush.js` se carga dinámicamente solo desde PLAY al iniciar un circuito, con timeout y botón de reintento.
 
 ## Documentación

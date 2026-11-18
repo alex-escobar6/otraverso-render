@@ -8,15 +8,15 @@ Ruta: /home/sistemas/otraverso
 4) python3 scripts/serve.py
 
 Abrir en el navegador: http://127.0.0.1:8000
-- Galaxia:       http://127.0.0.1:8000/  (planetas WebGL, orbitas y viaje a SHOP)
+- Galaxia:       http://127.0.0.1:8000/  (planetas Canvas 2D, orbitas y viaje a SHOP)
 - Tienda:        http://127.0.0.1:8000/shop
 - NEXUS RUSH:    http://127.0.0.1:8000/play
 
 Controles del juego: flechas/WASD, Espacio turbo, Shift salto,
 P pausa, R reiniciar, Esc volver. Tambien hay botones tactiles.
-El juego se carga solo al iniciar un circuito. La portada usa WebGL con
-fallback CSS y el loader se apaga solo; si WebGL falla, los planetas de
-respaldo siguen visibles. Si cambias codigo Python del servidor, reinicia
+El juego se carga solo al iniciar un circuito. La portada usa un unico
+canvas 2D sin loader ni three.min.js; los planetas se dibujan desde el
+primer render. Si cambias codigo Python del servidor, reinicia
 serve.py: un proceso antiguo puede servir plantillas nuevas con scripts
 obsoletos.
 
