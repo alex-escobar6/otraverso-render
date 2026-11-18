@@ -19,10 +19,8 @@ def _page(request: Request, scene: str, circuit: int = 0, title: str = "OTRAVERS
         active="play",
         request=request,
         head_extra='<link rel="stylesheet" href="/static/css/galaxy.css">',
-        scripts=('<script src="/static/js/vendor/three.min.js" defer></script>'
-                 '<script src="/static/js/universe-core.js" defer></script>'
-                 '<script src="/static/js/galaxy.js" defer></script>'
-                 '<script src="/static/js/nexus-rush.js" defer></script>'),
+        scripts=('<script src="/static/js/universe-core.js" defer></script>'
+                 '<script src="/static/js/galaxy.js" defer></script>'),
     ))
 
 

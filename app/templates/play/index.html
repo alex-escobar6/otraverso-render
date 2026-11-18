@@ -1,14 +1,42 @@
 <section class="universe-stage" data-universe-root data-scene="$SCENE" data-circuit="$CIRCUIT" id="nexo-play" aria-label="Universo OTRAVERSO PLAY y NEXUS RUSH">
-  <canvas class="universe-canvas" data-universe-canvas aria-hidden="true"></canvas>
-  <div class="universe-atmosphere" aria-hidden="true"></div>
-  <div class="universe-warp" data-warp-overlay aria-hidden="true"></div>
-  <div class="universe-labels" data-universe-labels aria-hidden="true"></div>
+  <div class="universe-scene universe-scene--play" aria-hidden="true">
+    <svg class="universe-sky" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="play-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#04040f"/>
+          <stop offset="0.45" stop-color="#1a0b35"/>
+          <stop offset="0.7" stop-color="#3b1255"/>
+          <stop offset="1" stop-color="#06040f"/>
+        </linearGradient>
+        <radialGradient id="play-glow" cx="50%" cy="58%" r="50%">
+          <stop offset="0" stop-color="#f472b6" stop-opacity="0.42"/>
+          <stop offset="0.5" stop-color="#7c3aed" stop-opacity="0.16"/>
+          <stop offset="1" stop-color="#06040f" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#play-sky)"/>
+      <ellipse cx="800" cy="540" rx="700" ry="340" fill="url(#play-glow)"/>
+      <g class="universe-stars">
+        <circle cx="170" cy="110" r="1.4"/><circle cx="360" cy="210" r="1"/><circle cx="540" cy="80" r="1.6"/>
+        <circle cx="880" cy="140" r="1.2"/><circle cx="1120" cy="90" r="1.5"/><circle cx="1390" cy="190" r="1"/>
+      </g>
+      <g class="universe-archways">
+        <path d="M520 700V430a280 280 0 0 1 560 0v270"/>
+        <path d="M600 700V455a200 200 0 0 1 400 0v245"/>
+        <path d="M680 700V480a120 120 0 0 1 240 0v220"/>
+      </g>
+      <path class="universe-horizon" d="M0 700 Q400 650 800 700 T1600 700 V900 H0Z"/>
+    </svg>
+    <div class="universe-grid"></div>
+    <div class="universe-core-beacon"><span></span><span></span></div>
+  </div>
 
-  <div class="universe-loader" data-loader role="status" aria-live="polite">
-    <div class="universe-loader__mark" aria-hidden="true">O<span>/</span></div>
-    <p class="universe-loader__kicker">OTRAVERSO PLAY · NEXUS RUSH</p>
-    <div class="universe-loader__track"><span class="universe-loader__bar" data-loader-bar></span></div>
-    <p class="universe-loader__status" data-loader-status>Encendiendo motores…</p>
+  <div class="universe-warp" data-warp-overlay aria-hidden="true"></div>
+
+  <div class="universe-boot" data-loader aria-hidden="true"><span></span> NEXO ESTABLECIDO</div>
+  <div class="universe-error" data-universe-error hidden role="alert">
+    <span data-error-text>No se pudo iniciar la experiencia.</span>
+    <button type="button" data-error-retry>Reintentar</button>
   </div>
 
   <div class="universe-ui universe-hub-ui">
@@ -21,28 +49,10 @@
         <a class="universe-primary" href="/shop" data-warp>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
       </div>
     </header>
-
-    <aside class="universe-dossier" data-dossier hidden aria-live="polite">
-      <p class="universe-dossier__eyebrow" data-dossier-state></p>
-      <h2 data-dossier-name></h2>
-      <p class="universe-dossier__tagline" data-dossier-tagline></p>
-      <p class="universe-dossier__text" data-dossier-description></p>
-      <a class="universe-dossier__cta" href="/shop" data-dossier-cta data-warp hidden>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
-      <button class="universe-dossier__cta" type="button" data-dossier-dialog data-dialog hidden>VER PRESENTACIÓN <i aria-hidden="true">→</i></button>
-    </aside>
-
-    <div class="universe-controls" role="group" aria-label="Controles del recorrido">
-      <button class="universe-control" type="button" data-tour-toggle aria-label="Pausar recorrido">❚❚ <span>PAUSAR</span></button>
-      <button class="universe-control" type="button" data-tour-overview aria-label="Volver a la vista general">⌂ <span>VISTA GENERAL</span></button>
-      <div class="universe-tour-track" aria-hidden="true"><span></span></div>
-    </div>
-
-    <nav class="universe-index" id="indice-universos" aria-label="Índice de universos">
+    <nav class="universe-index" aria-label="Índice de universos">
       <span class="universe-index__label">UNIVERSOS</span>
-      <button class="universe-index__item" type="button" data-portal="shop" data-name="OTRAVERSO SHOP" data-order="01" data-tagline="Descubre cosas que no sabías que necesitabas" data-status="DISPONIBLE" data-description="Tienda real con inventario y pedidos." data-href="/shop" data-available="1" data-color="#8b5cf6" style="--dot:#8b5cf6"><span class="universe-index__dot"></span><span>SHOP</span><small>DISPONIBLE</small></button>
-      <button class="universe-index__item" type="button" data-portal="play" data-name="OTRAVERSO PLAY" data-order="03" data-tagline="El siguiente nivel comienza aquí" data-status="DISPONIBLE" data-description="NEXUS RUSH: tres circuitos de carrera 3D." data-href="/play" data-available="1" data-color="#f472b6" style="--dot:#f472b6"><span class="universe-index__dot"></span><span>PLAY</span><small>DISPONIBLE</small></button>
-      <button class="universe-index__item" type="button" data-portal="whatif" data-name="WHAT IF" data-order="02" data-tagline="¿Y si todo pudiera ser diferente?" data-status="Planeado" data-description="Realidades alternativas en diseño." data-href="/universos/whatif" data-available="0" data-color="#8b7cff" style="--dot:#8b7cff"><span class="universe-index__dot"></span><span>WHAT IF</span><small>Planeado</small></button>
-      <button class="universe-index__item" type="button" data-portal="labs" data-name="LABS" data-order="04" data-tagline="Experimenta. Crea. Evoluciona" data-status="Planeado" data-description="Prototipos y herramientas en desarrollo." data-href="/universos/labs" data-available="0" data-color="#2dd4bf" style="--dot:#2dd4bf"><span class="universe-index__dot"></span><span>LABS</span><small>Planeado</small></button>
+      <a class="universe-index__item" href="/shop"><span class="universe-index__dot"></span><span>SHOP</span><small>DISPONIBLE</small></a>
+      <a class="universe-index__item" href="/play"><span class="universe-index__dot"></span><span>PLAY</span><small>DISPONIBLE</small></a>
     </nav>
   </div>
 
@@ -64,10 +74,11 @@
   </div>
 
   <div class="universe-ui universe-game-ui">
+    <canvas class="universe-game-canvas" data-game-canvas aria-hidden="true"></canvas>
     <div class="universe-game-panel" aria-live="off">
       <div class="universe-hud-row">
         <div class="universe-hud-item"><span>Velocidad</span><strong data-hud-speed>0 km/h</strong></div>
-        <div class="universe-hud-item"><span>Tiempo</span><strong data-hud-time>0.0 / 95s</strong></div>
+        <div class="universe-hud-item"><span>Tiempo</span><strong data-hud-time>95.0 / 95s</strong></div>
         <div class="universe-hud-item"><span>Puntos</span><strong data-hud-score>0</strong></div>
         <div class="universe-hud-item">
           <span>Turbo</span><div class="universe-meter"><span data-hud-turbo style="width:100%"></span></div>
@@ -109,22 +120,13 @@
   </div>
 
   <div class="universe-toast" data-universe-toast role="status" aria-live="polite"></div>
-
-  <div class="universe-fallback" data-universe-fallback hidden>
-    <h2>NEXUS RUSH</h2>
-    <p>El entorno 3D no está disponible en este navegador. Vuelve al nexo dimensional para continuar explorando.</p>
-    <div>
-      <a href="/">Volver al nexo</a>
-      <a href="/shop">Ir a SHOP</a>
-    </div>
-  </div>
 </section>
 
 <noscript>
   <section class="section">
     <div class="container pages-content">
       <h2>OTRAVERSO PLAY</h2>
-      <p>NEXUS RUSH requiere JavaScript y WebGL. Vuelve al <a href="/">nexo dimensional</a> o entra a <a href="/shop">SHOP</a>.</p>
+      <p>NEXUS RUSH requiere JavaScript. Vuelve al <a href="/">nexo dimensional</a> o entra a <a href="/shop">SHOP</a>.</p>
     </div>
   </section>
 </noscript>

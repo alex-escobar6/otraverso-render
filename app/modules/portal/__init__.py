@@ -74,7 +74,7 @@ def register(router) -> None:
     router.get("/universos/{code}", universe, name="portal.universe")
 
 
-def _portal_node(module, meta: dict) -> str:
+def _portal_common(module, meta: dict) -> tuple:
     code = module["code"]
     name = esc(module["name"])
     tagline = esc(meta["tagline"])
@@ -84,13 +84,35 @@ def _portal_node(module, meta: dict) -> str:
     available = bool(module["enabled"]) or code == "play"
     href = "/shop" if code == "shop" else ("/play" if code == "play" else f"/universos/{code}")
     status = "DISPONIBLE" if available else "Planeado"
+    return code, name, tagline, order, color, available, href, status, accent, meta["detail"]
+
+
+def _portal_node(module, meta: dict) -> str:
+    code, name, tagline, order, color, available, href, status, accent, detail = _portal_common(module, meta)
     return f"""
     <button class="universe-index__item" type="button" data-portal="{esc(code)}"
       data-name="{name}" data-order="{order}" data-tagline="{tagline}" data-status="{status}"
-      data-description="{esc(meta['detail'])}" data-href="{esc(href)}"
+      data-description="{esc(detail)}" data-href="{esc(href)}"
       data-available="{'1' if available else '0'}" data-color="{color}" data-accent="{accent}"
       style="--dot:{color}" aria-label="Abrir {name}: {tagline}">
       <span class="universe-index__dot"></span><span>{esc(meta['short'])}</span><small>{status}</small>
+    </button>"""
+
+
+def _portal_gate(module, meta: dict) -> str:
+    code, name, tagline, order, color, available, href, status, accent, detail = _portal_common(module, meta)
+    return f"""
+    <button class="universe-gate" type="button" data-portal="{esc(code)}" data-gate
+      data-name="{name}" data-order="{order}" data-tagline="{tagline}" data-status="{status}"
+      data-description="{esc(detail)}" data-href="{esc(href)}"
+      data-available="{'1' if available else '0'}" data-color="{color}" data-accent="{accent}"
+      style="--gate-x:{meta['x']};--gate-y:{meta['y']};--gate-color:{color};--gate-accent:{accent}"
+      aria-label="Portal {name}: {tagline}. {status}">
+      <span class="universe-gate__aura"></span>
+      <span class="universe-gate__ring universe-gate__ring--outer"></span>
+      <span class="universe-gate__ring universe-gate__ring--inner"></span>
+      <span class="universe-gate__membrane"></span>
+      <span class="universe-gate__label"><b>{esc(meta['short'])}</b><small>{status}</small></span>
     </button>"""
 
 
@@ -98,7 +120,7 @@ def _world_dialog(module, meta: dict) -> str:
     code = module["code"]
     name = esc(module["name"])
     return f"""
-    <div class="universe-dialog" data-dialog="{esc(code)}" hidden role="dialog" aria-modal="true"
+    <div class="universe-dialog" data-dialog-panel="{esc(code)}" hidden role="dialog" aria-modal="true"
          aria-labelledby="detail-title-{esc(code)}">
       <div class="universe-dialog__backdrop" data-close></div>
       <div class="universe-dialog__card" style="--detail-color:{esc(meta['color'])}">
@@ -117,12 +139,14 @@ def home(request: Request) -> Response:
     visual = settings_group("visual")
     modules = [row for row in query("SELECT * FROM modules ORDER BY sort_order") if row["code"] != "portal"]
     nodes = []
+    gates = []
     dialogs = []
     for module in modules:
         meta = UNIVERSE_META.get(module["code"])
         if not meta:
             continue
         nodes.append(_portal_node(module, meta))
+        gates.append(_portal_gate(module, meta))
         if not (module["enabled"] or module["code"] == "play"):
             dialogs.append(_world_dialog(module, meta))
 
@@ -130,6 +154,7 @@ def home(request: Request) -> Response:
         HERO_TITLE=esc(visual.get("hero_title", "Hay más de un mundo por descubrir")),
         HERO_SUBTITLE=esc(visual.get("hero_subtitle", "")),
         PORTAL_NODES="".join(nodes),
+        PORTAL_GATES="".join(gates),
         PORTAL_DIALOGS="".join(dialogs),
     )
     return Response(render_page(
@@ -139,10 +164,8 @@ def home(request: Request) -> Response:
         active="portal",
         request=request,
         head_extra='<link rel="stylesheet" href="/static/css/galaxy.css">',
-        scripts=('<script src="/static/js/vendor/three.min.js" defer></script>'
-                 '<script src="/static/js/universe-core.js" defer></script>'
-                 '<script src="/static/js/galaxy.js" defer></script>'
-                 '<script src="/static/js/nexus-rush.js" defer></script>'),
+        scripts=('<script src="/static/js/universe-core.js" defer></script>'
+                 '<script src="/static/js/galaxy.js" defer></script>'),
     ))
 
 

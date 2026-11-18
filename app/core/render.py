@@ -68,7 +68,7 @@ def render_page(
     footer = _public_footer(commercial, visual, enabled)
     logo_url = visual.get("logo", "").strip()
     logo_html = f'<img class="brand-image" src="{esc(logo_url)}" alt="OTRAVERSO">' if logo_url else ""
-    favicon_url = visual.get("favicon", "").strip()
+    favicon_url = visual.get("favicon", "").strip() or "/static/favicon.svg"
     return render("base.html",
         TITLE=esc(seo.get("title") or title or "OTRAVERSO"),
         DESCRIPTION=esc(seo.get("description", "")),
