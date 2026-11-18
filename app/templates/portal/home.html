@@ -13,29 +13,16 @@
         <a class="galaxy-primary" href="/shop" data-warp>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
         <a class="galaxy-secondary" href="#indice-universos">VER UNIVERSOS <i aria-hidden="true">↓</i></a>
       </div>
-      <p class="galaxy-hint">Arrastra para explorar · Rueda para acercar · Selecciona un mundo</p>
+      <p class="galaxy-hint">Mueve el cursor para explorar la galaxia · Selecciona un mundo</p>
     </header>
 
     <div class="galaxy-worlds">$WORLD_NODES</div>
-    <div class="galaxy-objects" aria-label="Objetos explorables"></div>
 
     <nav class="galaxy-index" id="indice-universos" aria-label="Índice de universos">
       <span class="galaxy-index__label">UNIVERSOS</span>
       $GALAXY_INDEX
     </nav>
-
-    <div class="galaxy-controls" role="group" aria-label="Controles de exploración">
-      <span class="galaxy-controls__hint" data-control-hint>Arrastra · Rueda · Selecciona</span>
-      <span class="galaxy-controls__progress" data-discovery-progress>0/4 hallazgos</span>
-      <button class="galaxy-controls__button" type="button" data-camera="out" aria-label="Alejar galaxia">−</button>
-      <button class="galaxy-controls__button" type="button" data-camera="reset" aria-label="Restablecer vista">⌖</button>
-      <button class="galaxy-controls__button" type="button" data-camera="in" aria-label="Acercar galaxia">+</button>
-    </div>
-    <noscript>
-      <p class="galaxy-noscript">Exploración interactiva no disponible sin JavaScript. Universos: <a href="/shop">SHOP</a>, <a href="/universos/whatif">WHAT IF</a>, <a href="/play">PLAY</a>, <a href="/universos/labs">LABS</a>.</p>
-    </noscript>
   </div>
-  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-discovery-live></p>
 </section>
 
 $WORLD_DIALOGS

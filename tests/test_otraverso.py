@@ -262,41 +262,6 @@ class OtraversoTests(unittest.TestCase):
         enabled = {row["code"] for row in query("SELECT code FROM modules WHERE enabled=1")}
         self.assertEqual(enabled, {"portal", "shop"})
 
-    def test_13_interactive_exploration_and_accessibility(self) -> None:
-        client = Client()
-        status, _, body = client.call("/")
-        self.assertTrue(status.startswith("200"))
-        for marker in (
-            'class="galaxy-objects"', 'class="galaxy-controls"', 'data-camera="out"',
-            'data-camera="reset"', 'data-camera="in"', 'data-discovery-progress',
-            'data-discovery-live', 'aria-live="polite"', 'role="status"',
-            'aria-label="Controles de exploración"', 'class="skip-link"',
-            'aria-controls="detail-whatif"', 'aria-expanded="false"',
-            'id="detail-whatif"', 'aria-describedby="detail-body-whatif detail-note-whatif"',
-            'id="detail-body-whatif"', 'id="detail-note-whatif"',
-            '<noscript>', 'Universos: <a href="/shop">SHOP</a>',
-        ):
-            self.assertIn(marker, body)
-        root = Path(__file__).resolve().parents[1]
-        css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
-        js = (root / "app/static/js/galaxy.js").read_text(encoding="utf-8")
-        base = (root / "app/templates/base.html").read_text(encoding="utf-8")
-        self.assertIn('Saltar al contenido', base)
-        self.assertIn('touch-action:pan-y', css)
-        self.assertIn('--cam-x', css)
-        self.assertIn('--cam-z', css)
-        self.assertIn('.galaxy-controls{', css)
-        self.assertIn('.explore-object{', css)
-        self.assertIn('env(safe-area-inset-bottom,0px)', css)
-        self.assertIn('.mode-portal .galaxy-objects', css)
-        for marker in (
-            "pointerdown", "pointerup", "wheel", "zoomAt", "clampCamera", "focusWorld",
-            "handleMotionPreference", "monitorQuality", "drawExploreObject", "discover",
-            "localStorage", "focusables", "setDialogTriggers", "activePointers", "pinchDistance",
-        ):
-            self.assertIn(marker, js)
-        self.assertNotIn("/static/js/vendor/three.min.js", body)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

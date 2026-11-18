@@ -6,10 +6,6 @@
 
   var canvas = stage.querySelector('.galaxy-canvas');
   var ui = stage.querySelector('.galaxy-ui');
-  var objectLayer = stage.querySelector('.galaxy-objects');
-  var hintEl = stage.querySelector('[data-control-hint]');
-  var progressEl = stage.querySelector('[data-discovery-progress]');
-  var liveEl = stage.querySelector('[data-discovery-live]');
   var nodes = Array.prototype.slice.call(stage.querySelectorAll('.world-node'));
   var indexItems = Array.prototype.slice.call(stage.querySelectorAll('[data-index]'));
   var dialogs = {};
@@ -17,10 +13,8 @@
     dialogs[dialog.getAttribute('data-dialog')] = dialog;
   });
 
-  var reduceQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-  var coarseQuery = window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
-  var reduce = reduceQuery ? reduceQuery.matches : false;
-  var coarse = coarseQuery ? coarseQuery.matches : false;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   var lowPower = (navigator.hardwareConcurrency || 4) <= 2 || (navigator.deviceMemory || 4) <= 2;
   var ctx = null;
   try {
@@ -37,14 +31,6 @@
     { id: 'play', color: '#f472b6', accent: '#7dd3fc', base: 0.78, orbit: 0.92, size: 0.052, speed: 0.00007, parallax: 18, ring: true, moons: false },
     { id: 'labs', color: '#60a5fa', accent: '#5eead4', base: 2.52, orbit: 0.9, size: 0.05, speed: 0.00005, parallax: 14, ring: false, moons: false }
   ];
-  var objects = [
-    { id: 'beacon', label: 'Baliza comercial SHOP', color: '#54e8ff', base: -0.22, orbit: 1.22, size: 0.014, speed: 0.00009 },
-    { id: 'fragment', label: 'Fragmento WHAT IF', color: '#ffd89b', base: -2.3, orbit: 1.14, size: 0.013, speed: 0.00007 },
-    { id: 'capsule', label: 'Cápsula PLAY', color: '#7dd3fc', base: 0.46, orbit: 1.2, size: 0.013, speed: 0.00011 },
-    { id: 'relic', label: 'Relicario LABS', color: '#5eead4', base: 2.78, orbit: 1.16, size: 0.012, speed: 0.00008 }
-  ];
-
-  var foundColor = hexRgb('#9cffc4');
   var shopPalette = {
     ice: [229, 252, 255],
     cyan: [84, 232, 255],
@@ -70,7 +56,6 @@
   ];
 
   var byId = {};
-  var byObject = {};
   var indexById = {};
   worlds.forEach(function (world, i) {
     world.rgb = hexRgb(world.color);
@@ -80,12 +65,6 @@
     byId[world.id] = world;
     indexById[world.id] = stage.querySelector('[data-index="' + world.id + '"]');
   });
-  objects.forEach(function (object, i) {
-    object.rgb = hexRgb(object.color);
-    object.seed = i * 2.1 + 1.3;
-    byObject[object.id] = object;
-  });
-
   var W = 1;
   var H = 1;
   var M = 1;
@@ -113,19 +92,6 @@
   var lastTrigger = null;
   var warp = null;
   var warpProgress = 0;
-  var camera = { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1, vx: 0, vy: 0, dragging: false, pointerId: null, lastX: 0, lastY: 0 };
-  var activePointers = {};
-  var pinch = null;
-  var focusId = null;
-  var cameraKeys = {};
-  var quality = lowPower ? 0.65 : 1;
-  var qualityTime = 0;
-  var qualityFrames = 0;
-  var storageKey = 'otraverso.discoveries.v1';
-  var discovered = {};
-  var discoveryFlash = {};
-  var achievementAnnounced = false;
-  var hoveredObject = null;
 
   function hexRgb(value) {
     var hex = String(value || '#ffffff').replace('#', '');
@@ -133,6 +99,10 @@
     var number = parseInt(hex, 16);
     if (isNaN(number)) return [255, 255, 255];
     return [(number >> 16) & 255, (number >> 8) & 255, number & 255];
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   function rgba(color, alpha) {
@@ -145,202 +115,6 @@
       Math.round(a[1] + (b[1] - a[1]) * amount),
       Math.round(a[2] + (b[2] - a[2]) * amount)
     ];
-  }
-
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function loadDiscoveries() {
-    try {
-      var raw = window.localStorage ? window.localStorage.getItem(storageKey) : null;
-      var list = raw ? JSON.parse(raw) : [];
-      if (list && list.forEach) list.forEach(function (id) { discovered[id] = true; });
-    } catch (error) {
-      discovered = {};
-    }
-  }
-
-  function saveDiscoveries() {
-    try {
-      if (window.localStorage) window.localStorage.setItem(storageKey, JSON.stringify(Object.keys(discovered)));
-    } catch (error) {
-      return;
-    }
-  }
-
-  function foundCount() {
-    return objects.filter(function (object) { return !!discovered[object.id]; }).length;
-  }
-
-  function announce(message) {
-    if (!liveEl) return;
-    liveEl.textContent = '';
-    window.setTimeout(function () { liveEl.textContent = message; }, 40);
-  }
-
-  function updateDiscoveryUi() {
-    objects.forEach(function (object) {
-      if (!object.el) return;
-      object.el.setAttribute('data-found', discovered[object.id] ? 'true' : 'false');
-      object.el.setAttribute('aria-label', object.label + (discovered[object.id] ? ' · encontrado' : ' · sin encontrar'));
-    });
-    if (progressEl) progressEl.textContent = foundCount() + '/' + objects.length + ' hallazgos';
-    if (foundCount() === objects.length && !achievementAnnounced) {
-      achievementAnnounced = true;
-      announce('Logro desbloqueado: Cartógrafo multiversal.');
-    }
-  }
-
-  function discover(id) {
-    var object = byObject[id];
-    if (!object) return;
-    if (!discovered[id]) {
-      discovered[id] = true;
-      discoveryFlash[id] = t;
-      saveDiscoveries();
-      announce('Hallazgo registrado: ' + object.label + '.');
-    } else {
-      announce(object.label + ' ya había sido encontrado.');
-    }
-    updateDiscoveryUi();
-    if (!running) render();
-  }
-
-  function initObjects() {
-    if (!objectLayer) return;
-    objects.forEach(function (object) {
-      var button = document.createElement('button');
-      var mark = document.createElement('span');
-      var label = document.createElement('span');
-      button.type = 'button';
-      button.className = 'explore-object';
-      button.setAttribute('data-object', object.id);
-      button.setAttribute('aria-label', object.label);
-      button.style.setProperty('--object-color', object.color);
-      mark.className = 'explore-object__mark';
-      mark.setAttribute('aria-hidden', 'true');
-      label.className = 'explore-object__label';
-      label.textContent = object.label;
-      label.setAttribute('aria-hidden', 'true');
-      button.appendChild(mark);
-      button.appendChild(label);
-      objectLayer.appendChild(button);
-      object.el = button;
-      button.addEventListener('pointerenter', function () { hoveredObject = object.id; if (!running) render(); });
-      button.addEventListener('pointerleave', function () { hoveredObject = null; if (!running) render(); });
-      button.addEventListener('focus', function () { hoveredObject = object.id; if (!running) render(); });
-      button.addEventListener('blur', function () { hoveredObject = null; if (!running) render(); });
-      button.addEventListener('click', function () { discover(object.id); });
-    });
-    achievementAnnounced = foundCount() === objects.length;
-    updateDiscoveryUi();
-  }
-
-  function clampCamera() {
-    camera.tz = clamp(camera.tz, 0.72, 1.75);
-    var maxX = M * (0.34 + camera.tz * 0.1);
-    var maxY = H * (0.24 + camera.tz * 0.07);
-    camera.tx = clamp(camera.tx, -maxX, maxX);
-    camera.ty = clamp(camera.ty, -maxY, maxY);
-    camera.x = clamp(camera.x, -maxX, maxX);
-    camera.y = clamp(camera.y, -maxY, maxY);
-  }
-
-  function zoomAt(nextZoom, localX, localY) {
-    var originX = localX == null ? cx : localX;
-    var originY = localY == null ? cy : localY;
-    var previous = camera.tz;
-    var ratio = nextZoom / previous;
-    camera.tx = originX - cx - (originX - cx - camera.tx) * ratio;
-    camera.ty = originY - cy - (originY - cy - camera.ty) * ratio;
-    camera.tz = nextZoom;
-    camera.vx = 0;
-    camera.vy = 0;
-    clampCamera();
-    if (!running) render();
-  }
-
-  function resetCamera() {
-    focusId = null;
-    camera.tx = 0;
-    camera.ty = 0;
-    camera.tz = 1;
-    camera.vx = 0;
-    camera.vy = 0;
-    clampCamera();
-    if (!running) render();
-  }
-
-  function focusWorld(id) {
-    focusId = id || null;
-    if (!focusId) {
-      camera.tx = 0;
-      camera.ty = 0;
-      camera.tz = 1;
-    } else {
-      var world = byId[focusId];
-      if (!world) return;
-      var state = worldState(world);
-      var zoom = mobile ? 1.04 : 1.09;
-      camera.tz = zoom;
-      camera.tx = -(state.x - cx) * zoom;
-      camera.ty = -(state.y - cy) * zoom;
-    }
-    camera.vx = 0;
-    camera.vy = 0;
-    clampCamera();
-    if (!running) render();
-  }
-
-  function applyCamera() {
-    ctx.translate(cx + camera.x, cy + camera.y);
-    ctx.scale(camera.z, camera.z);
-    ctx.translate(-cx, -cy);
-  }
-
-  function syncCamera() {
-    if (ui) {
-      ui.style.setProperty('--cam-x', camera.x.toFixed(1) + 'px');
-      ui.style.setProperty('--cam-y', camera.y.toFixed(1) + 'px');
-      ui.style.setProperty('--cam-z', camera.z.toFixed(3));
-    }
-    if (hintEl) hintEl.textContent = coarse ? 'Arrastra · Pulsa · Selecciona' : 'Arrastra · Rueda · Selecciona';
-  }
-
-  function updateCamera(rawDelta) {
-    var step = rawDelta / 16.67;
-    if (!camera.dragging) {
-      camera.tx += camera.vx * step;
-      camera.ty += camera.vy * step;
-      var inertia = Math.pow(0.9, step);
-      camera.vx *= inertia;
-      camera.vy *= inertia;
-      if (Math.abs(camera.vx) < 0.02) camera.vx = 0;
-      if (Math.abs(camera.vy) < 0.02) camera.vy = 0;
-      if (cameraKeys.left) camera.tx -= 6 * step;
-      if (cameraKeys.right) camera.tx += 6 * step;
-      if (cameraKeys.up) camera.ty -= 6 * step;
-      if (cameraKeys.down) camera.ty += 6 * step;
-      if (cameraKeys.zoomIn) zoomAt(camera.tz + 0.04 * step, cx, cy);
-      if (cameraKeys.zoomOut) zoomAt(camera.tz - 0.04 * step, cx, cy);
-    }
-    clampCamera();
-    var ease = 1 - Math.pow(0.86, step);
-    camera.x += (camera.tx - camera.x) * ease;
-    camera.y += (camera.ty - camera.y) * ease;
-    camera.z += (camera.tz - camera.z) * ease;
-  }
-
-  function monitorQuality(rawDelta) {
-    qualityTime += rawDelta;
-    qualityFrames += 1;
-    if (qualityTime < 2200) return;
-    var average = qualityTime / qualityFrames;
-    qualityTime = 0;
-    qualityFrames = 0;
-    if (average > 24 && quality > 0.6) quality = Math.max(0.6, quality - 0.15);
-    else if (average < 18 && quality < 1 && !lowPower) quality = Math.min(1, quality + 0.1);
   }
 
   function buildScene() {
@@ -437,10 +211,7 @@
     rx = M * (mobile ? 0.4 : medium ? 0.24 : 0.36);
     ry = rx * (mobile ? 0.54 : 0.46);
     buildScene();
-    clampCamera();
     syncNodes();
-    syncObjects();
-    syncCamera();
     if (!running) render();
   }
 
@@ -477,35 +248,6 @@
     return states;
   }
 
-  function objectState(object) {
-    var angle = object.base + Math.sin(orbitalTime * object.speed + object.seed) * 0.06 + (coarse ? 0 : pointer.x * 0.02);
-    var depth = Math.sin(angle);
-    var scale = 0.85 + 0.15 * (depth + 1) / 2;
-    return {
-      x: cx + Math.cos(angle) * rx * object.orbit + (coarse ? 0 : pointer.x * (object.parallax || 12) * 0.45),
-      y: cy + Math.sin(angle) * ry * object.orbit + (coarse ? 0 : pointer.y * (object.parallax || 12) * 0.25),
-      r: Math.max(6, M * object.size * scale * (mobile ? 1.15 : 1)),
-      depth: depth,
-      angle: angle,
-      scale: scale
-    };
-  }
-
-  function syncObjects() {
-    var states = {};
-    objects.forEach(function (object) {
-      var state = objectState(object);
-      states[object.id] = state;
-      if (!object.el) return;
-      object.el.style.transform = 'translate3d(' + state.x.toFixed(2) + 'px,' + state.y.toFixed(2) + 'px,0) translate(-50%,-50%)';
-      object.el.style.zIndex = String(22 + Math.round((state.depth + 1) * 6));
-      var screenX = cx + (state.x - cx) * camera.z + camera.x;
-      object.el.setAttribute('data-side', screenX > cx + W * 0.18 ? 'left' : 'right');
-      object.el.classList.toggle('is-active', hoveredObject === object.id);
-    });
-    return states;
-  }
-
   function drawBackground() {
     var background = ctx.createLinearGradient(0, 0, W, H);
     background.addColorStop(0, '#03040e');
@@ -524,8 +266,7 @@
   }
 
   function drawStars() {
-    var limit = Math.max(1, Math.round(stars.length * quality));
-    for (var i = 0; i < limit; i++) {
+    for (var i = 0; i < stars.length; i++) {
       var star = stars[i];
       var x = star.x + pointer.x * 16 * star.z;
       var y = star.y + pointer.y * 11 * star.z;
@@ -558,8 +299,7 @@
     var rotation = t * 0.000035;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    var limit = Math.max(1, Math.round(spiral.length * quality));
-    for (var i = 0; i < limit; i++) {
+    for (var i = 0; i < spiral.length; i++) {
       var particle = spiral[i];
       var angle = particle.a + rotation;
       var x = cx + Math.cos(angle) * particle.r + pointer.x * 5;
@@ -898,8 +638,7 @@
       ctx.stroke();
     }
 
-    var lightLimit = Math.max(6, Math.round(24 * quality));
-    for (var l = 0; l < lightLimit; l++) {
+    for (var l = 0; l < 24; l++) {
       var la = l * 2.399 + 0.4;
       var lr = Math.sqrt((l + 0.5) / 24) * 0.86;
       var lx2 = x + Math.cos(la) * lr * r;
@@ -912,8 +651,7 @@
       ctx.fill();
     }
 
-    var flashLimit = Math.max(2, Math.round(5 * quality));
-    for (var f = 0; f < flashLimit; f++) {
+    for (var f = 0; f < 5; f++) {
       var fa = f * 1.9 + 0.7;
       var fx = x + Math.cos(fa) * r * 0.62;
       var fy = y + Math.sin(fa) * r * 0.62;
@@ -984,8 +722,7 @@
   function drawDust() {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    var limit = Math.max(1, Math.round(dust.length * quality));
-    for (var i = 0; i < limit; i++) {
+    for (var i = 0; i < dust.length; i++) {
       var particle = dust[i];
       var distance = Math.sqrt(Math.pow(particle.x - cx, 2) + Math.pow(particle.y - cy, 2));
       var influence = Math.max(0, 1 - distance / 320);
@@ -993,43 +730,6 @@
       var y = particle.y + pointer.y * 24 * influence + Math.cos(t * 0.00035 + particle.p) * 5;
       ctx.fillStyle = rgba(particle.c, 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(t * 0.001 + particle.p)));
       ctx.fillRect(x, y, particle.s, particle.s);
-    }
-    ctx.restore();
-  }
-
-  function drawExploreObject(object, state) {
-    var active = hoveredObject === object.id;
-    var found = !!discovered[object.id];
-    var flash = Math.max(0, 1 - (t - (discoveryFlash[object.id] || -9999)) / 900);
-    var x = state.x;
-    var y = state.y;
-    var r = state.r * (active ? 1.2 : 1) + flash * 7;
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    var glow = ctx.createRadialGradient(x, y, 0, x, y, r * 2.6);
-    glow.addColorStop(0, rgba(found ? foundColor : object.rgb, active || flash ? 0.42 : 0.24));
-    glow.addColorStop(0.5, rgba(object.rgb, 0.12));
-    glow.addColorStop(1, rgba(object.rgb, 0));
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, r * 2.6, 0, TAU);
-    ctx.fill();
-    ctx.translate(x, y);
-    ctx.rotate(Math.PI / 4 + Math.sin(t * 0.0004 + object.seed) * 0.08);
-    ctx.strokeStyle = rgba(found ? foundColor : object.rgb, active || flash ? 0.95 : 0.6);
-    ctx.lineWidth = active || flash ? 1.5 : 1;
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.lineTo(r, 0);
-    ctx.lineTo(0, r);
-    ctx.lineTo(-r, 0);
-    ctx.closePath();
-    ctx.stroke();
-    if (found || flash) {
-      ctx.fillStyle = rgba(foundColor, 0.6 + flash * 0.4);
-      ctx.beginPath();
-      ctx.arc(0, 0, Math.max(1.2, r * 0.24), 0, TAU);
-      ctx.fill();
     }
     ctx.restore();
   }
@@ -1055,26 +755,20 @@
 
   function render() {
     var states = syncNodes();
-    var objectStates = syncObjects();
-    if (ui && !coarse) {
-      ui.style.setProperty('--ui-x', (-pointer.x * 12).toFixed(1) + 'px');
-      ui.style.setProperty('--ui-y', (-pointer.y * 8).toFixed(1) + 'px');
-    }
-    syncCamera();
     if (!ctx) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.save();
-    drawBackground();
-    ctx.save();
-    applyCamera();
     if (warp) {
       var zoom = 1 + warpProgress * 3.6;
       ctx.translate(warp.x, warp.y);
       ctx.scale(zoom, zoom);
       ctx.translate(-warp.x, -warp.y);
     }
+    drawBackground();
     drawStars();
     drawSpiral();
+    ctx.save();
+    ctx.translate(pointer.x * 12, pointer.y * 8);
     drawCore();
     worlds.slice().sort(function (a, b) {
       return states[a.id].depth - states[b.id].depth;
@@ -1083,13 +777,14 @@
       if (world.id === 'shop') drawShopPlanet(world, states[world.id], !!active);
       else drawPlanet(world, states[world.id], !!active);
     });
-    objects.forEach(function (object) {
-      drawExploreObject(object, objectStates[object.id]);
-    });
     drawDust();
     ctx.restore();
     if (warp) drawStreaks();
     ctx.restore();
+    if (ui && !coarse) {
+      ui.style.setProperty('--ui-x', (-pointer.x * 12).toFixed(1) + 'px');
+      ui.style.setProperty('--ui-y', (-pointer.y * 8).toFixed(1) + 'px');
+    }
   }
 
   function frame(now) {
@@ -1103,8 +798,6 @@
     var pointerEase = 1 - Math.pow(0.945, rawDelta / 16.67);
     pointer.x += (pointer.tx - pointer.x) * pointerEase;
     pointer.y += (pointer.ty - pointer.y) * pointerEase;
-    if (!warp) updateCamera(rawDelta);
-    monitorQuality(rawDelta);
     if (warp) {
       warpProgress = Math.min(1, (now - warp.start) / 900);
       if (warpProgress >= 1) {
@@ -1142,13 +835,6 @@
     if (!running) render();
   }
 
-  function setDialogTriggers(id, open) {
-    var triggers = document.querySelectorAll('.world-node[data-dialog="' + id + '"],.galaxy-index__item[data-dialog="' + id + '"]');
-    Array.prototype.forEach.call(triggers, function (trigger) {
-      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-  }
-
   function openDialog(id) {
     var dialog = dialogs[id];
     if (!dialog) return;
@@ -1157,8 +843,6 @@
     lastTrigger = document.activeElement;
     dialog.hidden = false;
     document.body.classList.add('modal-open');
-    setDialogTriggers(id, true);
-    focusWorld(id);
     window.requestAnimationFrame(function () {
       dialog.classList.add('is-open');
     });
@@ -1173,8 +857,6 @@
     var closing = openId;
     openId = null;
     document.body.classList.remove('modal-open');
-    setDialogTriggers(closing, false);
-    focusWorld(null);
     if (dialog) {
       dialog.classList.remove('is-open');
       window.setTimeout(function () {
@@ -1203,23 +885,12 @@
   document.addEventListener('click', function (event) {
     var target = event.target;
     if (!target || !target.closest) return;
-    if (target.closest('[data-close]')) return;
-    var cameraControl = target.closest('[data-camera]');
-    if (cameraControl) {
-      event.preventDefault();
-      var action = cameraControl.getAttribute('data-camera');
-      if (action === 'reset') resetCamera();
-      else if (action === 'in') zoomAt(camera.tz + 0.18, cx, cy);
-      else if (action === 'out') zoomAt(camera.tz - 0.18, cx, cy);
-      return;
-    }
-    var trigger = target.closest('.world-node[data-dialog],.galaxy-index__item[data-dialog]');
+    var trigger = target.closest('[data-dialog]');
     if (trigger) {
       event.preventDefault();
       openDialog(trigger.getAttribute('data-dialog'));
       return;
     }
-    if (target.closest('.world-detail')) return;
     var warpLink = target.closest('[data-warp]');
     if (!warpLink || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
@@ -1228,9 +899,7 @@
       window.location.assign(href);
       return;
     }
-    var origin = warpLink.closest('[data-world],[data-index]');
-    var originId = origin ? (origin.getAttribute('data-world') || origin.getAttribute('data-index')) : 'shop';
-    var state = worldState(byId[originId] || byId.shop);
+    var state = worldState(byId.shop);
     warp = { x: state.x, y: state.y, start: performance.now(), href: href };
     warpProgress = 0;
     stage.classList.add('is-warping');
@@ -1243,168 +912,18 @@
   });
 
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && openId) {
-      closeDialog(false);
-      return;
-    }
-    if (openId) {
-      if (event.key !== 'Tab') return;
-      var dialog = dialogs[openId];
-      if (!dialog) return;
-      var focusables = Array.prototype.slice.call(dialog.querySelectorAll('button,a[href],[tabindex]:not([tabindex="-1"])'));
-      if (!focusables.length) return;
-      var first = focusables[0];
-      var last = focusables[focusables.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-      return;
-    }
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
-    if (event.target && event.target.closest && event.target.closest('input,textarea,select,[contenteditable],a,button')) return;
-    var key = event.key;
-    var mapped = null;
-    if (key === 'ArrowLeft') mapped = 'left';
-    else if (key === 'ArrowRight') mapped = 'right';
-    else if (key === 'ArrowUp') mapped = 'up';
-    else if (key === 'ArrowDown') mapped = 'down';
-    else if (key === '+' || key === '=') mapped = 'zoomIn';
-    else if (key === '-' || key === '_') mapped = 'zoomOut';
-    else if (key === '0') {
-      event.preventDefault();
-      resetCamera();
-      return;
-    }
-    if (mapped) {
-      event.preventDefault();
-      cameraKeys[mapped] = true;
-    }
-  });
-
-  document.addEventListener('keyup', function (event) {
-    if (event.key === 'ArrowLeft') cameraKeys.left = false;
-    else if (event.key === 'ArrowRight') cameraKeys.right = false;
-    else if (event.key === 'ArrowUp') cameraKeys.up = false;
-    else if (event.key === 'ArrowDown') cameraKeys.down = false;
-    else if (event.key === '+' || event.key === '=') cameraKeys.zoomIn = false;
-    else if (event.key === '-' || event.key === '_') cameraKeys.zoomOut = false;
-  });
-
-  window.addEventListener('blur', function () {
-    cameraKeys = {};
-  });
-
-  function localPoint(event) {
-    var rect = stage.getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-  }
-
-  function pointerIds() {
-    return Object.keys(activePointers);
-  }
-
-  function pinchDistance() {
-    var ids = pointerIds();
-    if (ids.length < 2) return 0;
-    var a = activePointers[ids[0]];
-    var b = activePointers[ids[1]];
-    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-  }
-
-  function startPinch() {
-    var distance = pinchDistance();
-    if (!distance) return;
-    pinch = { distance: distance, zoom: camera.tz };
-    camera.dragging = false;
-    stage.classList.remove('is-dragging');
-  }
-
-  function endPointer(event) {
-    delete activePointers[event.pointerId];
-    if (pointerIds().length < 2) pinch = null;
-    if (camera.pointerId === event.pointerId) {
-      camera.dragging = false;
-      camera.pointerId = null;
-      stage.classList.remove('is-dragging');
-    }
-    if (stage.releasePointerCapture) {
-      try { stage.releasePointerCapture(event.pointerId); } catch (error) { return; }
-    }
-  }
-
-  stage.addEventListener('pointerdown', function (event) {
-    if (event.button !== 0 && event.pointerType === 'mouse') return;
-    if (event.target.closest && event.target.closest('a,button,.galaxy-intro,.galaxy-index,.galaxy-controls,.world-detail')) return;
-    var point = localPoint(event);
-    activePointers[event.pointerId] = point;
-    if (stage.setPointerCapture) {
-      try { stage.setPointerCapture(event.pointerId); } catch (error) { return; }
-    }
-    if (pointerIds().length === 2) {
-      startPinch();
-      return;
-    }
-    if (pointerIds().length > 1) return;
-    camera.dragging = true;
-    camera.pointerId = event.pointerId;
-    camera.lastX = point.x;
-    camera.lastY = point.y;
-    camera.vx = 0;
-    camera.vy = 0;
-    focusId = null;
-    stage.classList.add('is-dragging');
-    setHover(null);
-    hoveredObject = null;
+    if (event.key === 'Escape' && openId) closeDialog(false);
   });
 
   window.addEventListener('pointermove', function (event) {
-    var point = localPoint(event);
-    if (activePointers[event.pointerId]) activePointers[event.pointerId] = point;
-    if (pinch && pointerIds().length >= 2) {
-      event.preventDefault();
-      var distance = pinchDistance();
-      if (distance && pinch.distance) zoomAt(pinch.zoom * distance / pinch.distance, (activePointers[pointerIds()[0]].x + activePointers[pointerIds()[1]].x) / 2, (activePointers[pointerIds()[0]].y + activePointers[pointerIds()[1]].y) / 2);
-      return;
-    }
-    if (camera.dragging && camera.pointerId === event.pointerId) {
-      var dx = point.x - camera.lastX;
-      var dy = point.y - camera.lastY;
-      if (coarse && Math.abs(dy) > Math.abs(dx) * 1.25) return;
-      event.preventDefault();
-      camera.lastX = point.x;
-      camera.lastY = point.y;
-      camera.tx += dx;
-      camera.ty += dy;
-      camera.vx = dx * 0.65 + camera.vx * 0.35;
-      camera.vy = dy * 0.65 + camera.vy * 0.35;
-      clampCamera();
-      return;
-    }
     if (coarse) return;
-    pointer.tx = clamp(point.x / W * 2 - 1, -1, 1);
-    pointer.ty = clamp(point.y / H * 2 - 1, -1, 1);
-  }, { passive: false });
-
-  stage.addEventListener('pointerup', endPointer);
-  stage.addEventListener('pointercancel', endPointer);
+    pointer.tx = Math.max(-1, Math.min(1, event.clientX / W * 2 - 1));
+    pointer.ty = Math.max(-1, Math.min(1, event.clientY / H * 2 - 1));
+  }, { passive: true });
   stage.addEventListener('pointerleave', function () {
-    if (!camera.dragging) {
-      pointer.tx = 0;
-      pointer.ty = 0;
-    }
+    pointer.tx = 0;
+    pointer.ty = 0;
   });
-
-  stage.addEventListener('wheel', function (event) {
-    if (event.target.closest && event.target.closest('.galaxy-index,.galaxy-controls,.world-detail')) return;
-    event.preventDefault();
-    var point = localPoint(event);
-    var factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.04 : 0.0015));
-    zoomAt(camera.tz * factor, point.x, point.y);
-  }, { passive: false });
 
   var resizeTimer = 0;
   window.addEventListener('resize', function () {
@@ -1426,32 +945,6 @@
     observer.observe(stage);
   }
 
-  function handleMotionPreference() {
-    reduce = reduceQuery ? reduceQuery.matches : false;
-    coarse = coarseQuery ? coarseQuery.matches : false;
-    if (coarse) {
-      pointer.tx = 0;
-      pointer.ty = 0;
-    }
-    if (reduce) {
-      stop();
-      render();
-    } else {
-      start();
-    }
-    syncCamera();
-  }
-
-  function watchMedia(query, handler) {
-    if (!query) return;
-    if (query.addEventListener) query.addEventListener('change', handler);
-    else if (query.addListener) query.addListener(handler);
-  }
-
-  watchMedia(reduceQuery, handleMotionPreference);
-  watchMedia(coarseQuery, handleMotionPreference);
-  loadDiscoveries();
-  initObjects();
   resize();
   start();
 })();

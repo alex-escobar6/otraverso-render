@@ -2,19 +2,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var toggle = document.querySelector('.menu-toggle');
   var nav = document.querySelector('.site-nav');
   if (toggle && nav) {
-    function closeMenu() {
-      nav.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
     toggle.addEventListener('click', function () {
       var open = nav.classList.toggle('open');
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && nav.classList.contains('open')) {
-        closeMenu();
-        toggle.focus();
-      }
     });
   }
 
