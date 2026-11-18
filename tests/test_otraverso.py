@@ -231,25 +231,28 @@ class OtraversoTests(unittest.TestCase):
             self.assertTrue(status.startswith("200"), f"{path}: {status}")
             self.assertNotIn("Ocurrió un error inesperado", body)
 
-    def test_12_lightweight_universe_and_nexus_rush(self) -> None:
+    def test_12_original_galaxy_and_play_preserved(self) -> None:
         client = Client()
         status, _, body = client.call("/")
         self.assertTrue(status.startswith("200"))
-        self.assertIn('data-portal="play"', body)
-        self.assertIn('data-gate', body)
-        self.assertIn('data-scene="hub"', body)
-        self.assertIn("/static/js/universe-core.js", body)
-        self.assertNotIn("/static/js/vendor/three.min.js", body)
-        self.assertNotIn("/static/js/nexus-rush.js", body)
+        self.assertIn('class="galaxy-stage no-webgl"', body)
+        self.assertIn('data-loader', body)
+        for world in ("shop", "whatif", "play", "labs"):
+            self.assertIn(f'data-world="{world}"', body)
+        self.assertIn("/static/js/vendor/three.min.js", body)
+        self.assertIn("/static/js/galaxy.js", body)
         self.assertNotIn("Calibrando portales", body)
+        self.assertNotIn('data-scene="hub"', body)
+        css = (Path(__file__).resolve().parents[1] / "app/static/css/galaxy.css").read_text(encoding="utf-8")
+        self.assertIn("galaxy-loader-failsafe", css)
         for path, marker in (("/play", "NEXUS RUSH"), ("/play/nexus-rush", "data-game-result")):
             status, _, body = client.call(path)
             self.assertTrue(status.startswith("200"), path)
             self.assertIn(marker, body)
+            self.assertIn("/static/css/play.css", body)
             self.assertIn("/static/js/universe-core.js", body)
-            self.assertIn("data-game-canvas", body)
+            self.assertIn("/static/js/play.js", body)
             self.assertNotIn("/static/js/vendor/three.min.js", body)
-            self.assertNotIn("/static/js/nexus-rush.js", body)
         enabled = {row["code"] for row in query("SELECT code FROM modules WHERE enabled=1")}
         self.assertEqual(enabled, {"portal", "shop"})
 
