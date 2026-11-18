@@ -1,0 +1,14 @@
+<div class="panel">
+  <h2>Variantes</h2>
+  <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>SKU</th><th>Ajuste precio</th><th>Stock</th><th>Acción</th></tr></thead>
+    <tbody>$VARIANTS</tbody></table></div>
+  <h3 style="margin-top:1rem">Nueva variante</h3>
+  <form class="form-grid" method="post" action="/admin/products/$PRODUCT_ID/variants">
+    $CSRF
+    <div class="field"><label>Nombre (talla, color...)</label><input name="name" required></div>
+    <div class="field"><label>SKU</label><input name="sku"></div>
+    <div class="field"><label>Ajuste de precio (COP)</label><input name="price_delta" type="number" value="0"></div>
+    <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="0"></div>
+    <div class="field full"><button class="btn btn-primary btn-sm" type="submit">Agregar variante</button></div>
+  </form>
+</div>

@@ -1,0 +1,13 @@
+<div class="panel">
+  <form class="form-grid" method="get" action="/admin/orders">
+    <div class="field"><label>Buscar</label><input name="q" value="$Q" placeholder="Cliente o código"></div>
+    <div class="field"><label>Estado</label><select name="status">$STATUS_OPTIONS</select></div>
+    <div class="field"><label>Desde</label><input type="date" name="from" value="$FROM"></div>
+    <div class="field"><label>Hasta</label><input type="date" name="to" value="$TO"></div>
+    <div class="field full"><button class="btn btn-primary" type="submit">Filtrar</button>
+      <a class="btn btn-ghost" href="/admin/orders/new">Nuevo pedido manual</a></div>
+  </form>
+</div>
+<div class="panel"><div class="table-wrap"><table>
+  <thead><tr><th>Código</th><th>Cliente</th><th>Fecha</th><th>Modalidad</th><th>Total</th><th>Estado</th></tr></thead>
+  <tbody>$ROWS</tbody></table></div></div>

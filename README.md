@@ -1,0 +1,80 @@
+# OTRAVERSO
+
+Plataforma digital modular con identidad propia. La primera versión funcional es **OTRAVERSO SHOP**: tienda de productos novedosos con inventario real, productos bajo pedido, cobertura en Nariño y solicitudes de compra por WhatsApp persistentes.
+
+Los universos **WHAT IF**, **PLAY** y **LABS** están declarados y visibles como planeados, sin funcionalidades activas ni datos simulados.
+
+## Estado
+
+- Portada OTRAVERSO y navegación por universos.
+- SHOP: inicio, catálogo con filtros y búsqueda, categorías, ficha de producto, cobertura y páginas informativas.
+- Modalidades: `stock` (inventario real) y `order` (bajo pedido/importación), claramente diferenciadas.
+- WhatsApp: antes de abrir el chat se persisten cliente, solicitud, mensaje y clic; abrir el chat **no** confirma una venta.
+- Panel administrativo con RBAC, auditoría y copias de seguridad.
+- SEO global e individual por producto y categoría, sitemap y robots.
+- Base de datos SQLite con WAL; sin dependencias externas obligatorias.
+
+## Requisitos
+
+- Python 3.11 o superior (verificado con Python 3.12.3).
+- Pillow recomendado para validar y redimensionar imágenes subidas (`python3 -m pip install Pillow`).
+- Para producción: servidor WSGI y proxy inverso con HTTPS.
+
+## Inicio rápido
+
+```bash
+cd /home/sistemas/otraverso
+cp .env.example .env
+# Editar .env: SECRET_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, BASE_URL, WHATSAPP_DEFAULT
+python3 scripts/init_db.py
+python3 scripts/serve.py
+```
+
+Abrir `http://127.0.0.1:8000`.
+
+Si no se definen credenciales, `init_db.py` genera un administrador temporal y lo guarda con permisos `0600` en `data/bootstrap_admin.txt`. Cámbielo después del primer ingreso.
+
+## Comandos
+
+| Acción | Comando |
+| --- | --- |
+| Inicializar/migrar BD | `python3 scripts/init_db.py` |
+| Servidor de desarrollo | `python3 scripts/serve.py` |
+| Pruebas | `python3 -m unittest discover -s tests -v` |
+| Compilar | `python3 -m compileall -q app scripts tests` |
+| Crear administrador | `python3 scripts/create_admin.py --email usuario@ejemplo.com` |
+| Copia de seguridad | `python3 scripts/backup.py` |
+| Restaurar copia | `python3 scripts/restore.py otraverso_AAAAMMDD_HHMMSS_cli.db --confirm` |
+
+## Estructura
+
+```text
+app/
+  core/       HTTP/WSGI, sesiones, CSRF, render, errores
+  modules/    portal, shop, admin
+  services/   catálogo, inventario, pedidos, WhatsApp, cobertura, analítica
+  templates/  HTML por universo y panel
+  static/     CSS y JS propios
+  config.py   Variables de entorno
+  db.py       Esquema, migraciones y semilla
+  security.py Hash, tokens y saneamiento
+  main.py     Aplicación WSGI y registro de rutas
+data/         BD, secret.key, imágenes, backups y credencial inicial (no versionar)
+docs/         Arquitectura, fases, despliegue y seguridad
+scripts/      CLI de inicialización, servidor, administradores y backups
+tests/        Suite de integración con BD temporal
+```
+
+## Notas importantes
+
+- Los importes se almacenan en centavos (`price_cents`, `total_cents`); la interfaz los muestra en COP.
+- La BD real no contiene productos de ejemplo. Las pruebas usan una base temporal.
+- No hay pago en línea: la solicitud se concreta y confirma por WhatsApp con el vendedor.
+- Registros de visitas, eventos y auditoría se escriben en la misma BD para consultas reales del panel.
+
+## Documentación
+
+- `docs/ARQUITECTURA.md`
+- `docs/FASES.md`
+- `docs/DESPLIEGUE.md`
+- `docs/SEGURIDAD.md`

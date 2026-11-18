@@ -1,0 +1,16 @@
+<div class="admin-tabs">
+  <a href="/admin/settings/commercial" class="$TAB_COMMERCIAL">Comercial</a>
+  <a href="/admin/settings/visual" class="$TAB_VISUAL">Visual</a>
+  <a href="/admin/settings/whatsapp" class="$TAB_WHATSAPP">WhatsApp</a>
+  <a href="/admin/settings/seo" class="$TAB_SEO">SEO</a>
+  <a href="/admin/settings/modules" class="$TAB_MODULES">Universos</a>
+</div>
+<div class="panel">
+  <h2>Configuración $SECTION</h2>
+  <form class="form-grid" method="post" enctype="multipart/form-data">
+    $CSRF
+    $FIELDS
+    <div class="field full"><button class="btn btn-primary" type="submit">Guardar cambios</button></div>
+  </form>
+  $EXTRA
+</div>

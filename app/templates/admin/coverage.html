@@ -1,0 +1,42 @@
+<div class="panel"><h2>Departamentos</h2>
+  <form class="form-grid" method="post" action="/admin/coverage/departments">
+    $CSRF
+    <div class="field"><label>Nombre</label><input name="name" required></div>
+    <div class="field"><label>Código</label><input name="code" placeholder="NAR"></div>
+    <div class="field full"><button class="btn btn-primary btn-sm" type="submit">Agregar departamento</button></div>
+  </form>
+</div>
+<div class="panel"><h2>Municipios</h2>
+  <div class="table-wrap"><table><thead><tr><th>Municipio</th><th>Departamento</th><th>Estado</th><th></th></tr></thead><tbody>$MUNICIPALITIES</tbody></table></div>
+  <form class="form-grid" method="post" action="/admin/coverage/municipalities" style="margin-top:1rem">
+    $CSRF
+    <div class="field"><label>Nombre</label><input name="name" required></div>
+    <div class="field"><label>Departamento</label><select name="department_id">$DEPT_OPTIONS</select></div>
+    <div class="field full"><button class="btn btn-primary btn-sm" type="submit">Agregar municipio</button></div>
+  </form>
+</div>
+<div class="panel"><h2>Zonas de entrega</h2>
+  <div class="table-wrap"><table><thead><tr><th>Municipio</th><th>Zona</th><th>Tipo</th><th></th></tr></thead><tbody>$ZONES</tbody></table></div>
+  <form class="form-grid" method="post" action="/admin/coverage/zones" style="margin-top:1rem">
+    $CSRF
+    <div class="field"><label>Municipio</label><select name="municipality_id">$MUNI_OPTIONS</select></div>
+    <div class="field"><label>Nombre de zona</label><input name="name" required></div>
+    <div class="field"><label>Tipo</label><select name="kind"><option value="city">Ciudad</option><option value="municipality">Municipio</option><option value="neighborhood">Barrio</option></select></div>
+    <div class="field"><label>Descripción</label><input name="description"></div>
+    <div class="field full"><button class="btn btn-primary btn-sm" type="submit">Agregar zona</button></div>
+  </form>
+</div>
+<div class="panel"><h2>Tarifas y tiempos por zona</h2>
+  <div class="table-wrap"><table><thead><tr><th>Zona</th><th>Modalidad</th><th>Costo COP</th><th>Horas</th><th>Etiqueta</th><th></th><th>Condiciones</th></tr></thead><tbody>$RATES</tbody></table></div>
+  <h3 style="margin-top:1rem">Nueva tarifa</h3>
+  <form class="form-grid" method="post" action="/admin/coverage/rates">
+    $CSRF
+    <div class="field"><label>Zona</label><select name="zone_id">$ZONE_OPTIONS</select></div>
+    <div class="field"><label>Modalidad</label><select name="modality"><option value="stock">Inventario</option><option value="order">Bajo pedido</option></select></div>
+    <div class="field"><label>Costo (COP)</label><input name="price" type="number" min="0" value="0"></div>
+    <div class="field"><label>Horas estimadas</label><input name="hours" type="number" min="0" value="24"></div>
+    <div class="field"><label>Etiqueta</label><input name="label"></div>
+    <div class="field"><label>Condiciones</label><input name="conditions"></div>
+    <div class="field full"><button class="btn btn-primary btn-sm" type="submit">Agregar tarifa</button></div>
+  </form>
+</div>

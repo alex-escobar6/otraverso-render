@@ -1,0 +1,17 @@
+<form class="detail-box" method="post" action="/shop/whatsapp">
+  <input type="hidden" name="csrf" value="$CSRF">
+  <input type="hidden" name="product_id" value="$PRODUCT_ID">
+  <input type="hidden" name="source" value="$SOURCE">
+  <h3>$BUTTON_TEXT</h3>
+  <div class="form-grid">
+    <div class="field"><label for="wa-name">Tu nombre</label><input id="wa-name" name="name" required maxlength="100" autocomplete="name"></div>
+    <div class="field"><label for="wa-phone">WhatsApp / celular</label><input id="wa-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="300 123 4567"></div>
+    <div class="field"><label for="wa-qty">Cantidad</label><input id="wa-qty" name="quantity" type="number" min="1" max="$QUANTITY_MAX" value="1" required></div>
+    <div class="field"><label for="wa-zone">Zona de entrega</label><select id="wa-zone" name="zona">$ZONE_OPTIONS</select></div>
+    <div class="field full"><label for="wa-note">Mensaje adicional (opcional)</label><textarea id="wa-note" name="note" rows="2" maxlength="500"></textarea></div>
+  </div>
+  <label class="checkline"><input type="checkbox" name="consent" value="1" required>
+    Acepto que OTRAVERSO use mis datos para gestionar esta solicitud, conforme a la Ley 1581 de 2012.</label>
+  <button class="btn btn-primary btn-block" type="submit" style="margin-top:.8rem">$BUTTON_TEXT</button>
+  <p class="hint" style="margin:.6rem 0 0">Se registrará la solicitud y se abrirá WhatsApp con un mensaje preparado. No se confirma una venta automáticamente.</p>
+</form>

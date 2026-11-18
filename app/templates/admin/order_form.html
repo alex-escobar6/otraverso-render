@@ -1,0 +1,15 @@
+<div class="panel">
+  <form class="form-grid" method="post" action="/admin/orders/create">
+    $CSRF
+    <div class="field"><label>Nombre del cliente *</label><input name="name" required></div>
+    <div class="field"><label>Teléfono / WhatsApp *</label><input name="phone" required></div>
+    <div class="field"><label>Producto *</label><select name="product_id" required>$PRODUCT_OPTIONS</select></div>
+    <div class="field"><label>Cantidad</label><input name="quantity" type="number" min="1" value="1" required></div>
+    <div class="field"><label>Zona de entrega</label><select name="zone_id">$ZONE_OPTIONS</select></div>
+    <div class="field"><label>Costo de envío (COP)</label><input name="shipping" type="number" min="0" value="0"></div>
+    <div class="field"><label>Municipio</label><input name="municipality"></div>
+    <div class="field"><label>Dirección</label><input name="address"></div>
+    <div class="field full"><label>Notas</label><textarea name="notes" rows="2"></textarea></div>
+    <div class="field full"><button class="btn btn-primary" type="submit">Crear pedido</button></div>
+  </form>
+</div>

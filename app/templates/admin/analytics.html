@@ -1,0 +1,21 @@
+<form class="panel form-grid" method="get" action="/admin/analytics">
+  <div class="field"><label>Desde</label><input type="date" name="from" value="$DATE_FROM"></div>
+  <div class="field"><label>Hasta</label><input type="date" name="to" value="$DATE_TO"></div>
+  <div class="field full"><button class="btn btn-primary" type="submit">Aplicar filtro</button></div>
+</form>
+<div class="stat-grid">
+  <div class="stat-card"><span>Clics WhatsApp</span><strong>$CLICKS</strong></div>
+  <div class="stat-card"><span>Solicitudes</span><strong>$REQUESTS</strong></div>
+  <div class="stat-card"><span>Pedidos</span><strong>$ORDERS</strong></div>
+  <div class="stat-card"><span>Conversión</span><strong>$CONVERSION</strong><small>Pedidos / clics</small></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+  <div class="panel"><h2>Eventos por tipo</h2><table><thead><tr><th>Evento</th><th>Total</th></tr></thead><tbody>$COUNTS</tbody></table></div>
+  <div class="panel"><h2>Búsquedas frecuentes</h2><table><thead><tr><th>Término</th><th>Total</th></tr></thead><tbody>$SEARCHES</tbody></table></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+  <div class="panel"><h2>Productos más vistos</h2><table><thead><tr><th>Producto</th><th>Visitas</th><th>Ventas</th></tr></thead><tbody>$PRODUCTS</tbody></table></div>
+  <div class="panel"><h2>Rendimiento por categoría</h2><table><thead><tr><th>Categoría</th><th>Productos</th><th>Visitas</th><th>Ventas</th></tr></thead><tbody>$CATEGORIES</tbody></table></div>
+</div>
+<div class="panel"><h2>Eventos recientes</h2><div class="table-wrap"><table>
+  <thead><tr><th>Tipo</th><th>Ruta</th><th>Detalle</th><th>Fecha</th></tr></thead><tbody>$RECENT</tbody></table></div></div>

@@ -1,0 +1,18 @@
+<div class="panel">
+  <form class="form-grid" method="post" action="/admin/customers/$ID/update">
+    $CSRF
+    <div class="field"><label>Nombre</label><input name="name" value="$NAME" required></div>
+    <div class="field"><label>Teléfono</label><input name="phone" value="$PHONE" required></div>
+    <div class="field"><label>Correo</label><input name="email" type="email" value="$EMAIL"></div>
+    <div class="field"><label>Municipio</label><input name="municipality" value="$MUNICIPALITY"></div>
+    <div class="field full"><label>Dirección</label><input name="address" value="$ADDRESS"></div>
+    <div class="field full"><label class="checkline"><input type="checkbox" name="consent" value="1"$CONSENT> Consentimiento de datos personales</label></div>
+    <div class="field full"><label>Notas internas</label><textarea name="notes" rows="2">$NOTES</textarea></div>
+    <div class="field full"><button class="btn btn-primary" type="submit">Guardar cliente</button></div>
+  </form>
+  <p class="hint">Registrado: $REGISTERED</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+  <div class="panel"><h2>Pedidos</h2><table><thead><tr><th>Código</th><th>Estado</th><th>Total</th><th>Fecha</th></tr></thead><tbody>$ORDERS</tbody></table></div>
+  <div class="panel"><h2>Solicitudes</h2><table><thead><tr><th>Código</th><th>Estado</th><th>Origen</th><th>Fecha</th></tr></thead><tbody>$REQUESTS</tbody></table></div>
+</div>

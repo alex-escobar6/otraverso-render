@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>$TITLE</title>
+  <meta name="description" content="$DESCRIPTION">
+  <meta name="keywords" content="$KEYWORDS">
+  <meta name="robots" content="$ROBOTS">
+  <meta property="og:title" content="$TITLE">
+  <meta property="og:description" content="$DESCRIPTION">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="$OG_IMAGE">
+  <link rel="canonical" href="$CANONICAL">
+  <link rel="icon" href="$FAVICON">
+  <style>
+    :root{--primary:$PRIMARY_COLOR;--secondary:$SECONDARY_COLOR;--accent:$ACCENT_COLOR;--bg:$BACKGROUND_COLOR;--font:$FONT_FAMILY}
+  </style>
+  <link rel="stylesheet" href="/static/css/style.css">
+  $HEAD_EXTRA
+</head>
+<body class="$BODY_CLASS">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OTRAVERSO inicio">
+      $LOGO
+      <span class="brand-mark" aria-hidden="true">O<span>/</span></span>
+      <span class="brand-text">OTRA<strong>VERSO</strong></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-label="Abrir menú" aria-expanded="false">☰</button>
+    <nav class="site-nav" aria-label="Navegación principal">$NAV_HTML</nav>
+  </header>
+  <main id="contenido">$CONTENT</main>
+  <footer class="site-footer" $FOOTER_VISIBLE>
+    <div class="container">$FOOTER_HTML</div>
+  </footer>
+  <a class="whatsapp-float" $WHATSAPP_VISIBLE href="$WHATSAPP_LINK" target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp">WhatsApp</a>
+  <script src="/static/js/app.js" defer></script>
+  $SCRIPTS
+</body>
+</html>

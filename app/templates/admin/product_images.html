@@ -1,0 +1,10 @@
+<div class="panel">
+  <h2>Fotografías del producto</h2>
+  <div>$IMAGES</div>
+  <form method="post" action="/admin/products/$PRODUCT_ID/images" enctype="multipart/form-data">
+    $CSRF
+    <div class="field"><label>Subir múltiples imágenes</label>
+      <input type="file" name="images" accept="image/*" multiple required></div>
+    <button class="btn btn-primary btn-sm" type="submit">Subir imágenes</button>
+  </form>
+</div>

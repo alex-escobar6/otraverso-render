@@ -1,0 +1,7 @@
+<form class="panel" method="get" action="/admin/audit">
+  <div class="field"><label>Filtrar acción</label><input name="action" value="$ACTION" placeholder="login, update, delete..."></div>
+  <button class="btn btn-primary btn-sm" type="submit">Filtrar</button>
+</form>
+<div class="panel"><div class="table-wrap"><table>
+  <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>IP</th></tr></thead>
+  <tbody>$ROWS</tbody></table></div></div>

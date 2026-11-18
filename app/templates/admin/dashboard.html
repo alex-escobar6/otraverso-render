@@ -1,0 +1,27 @@
+<form class="panel" method="get" action="/admin">
+  <div class="form-grid">
+    <div class="field"><label for="from">Desde</label><input id="from" name="from" type="date" value="$DATE_FROM"></div>
+    <div class="field"><label for="to">Hasta</label><input id="to" name="to" type="date" value="$DATE_TO"></div>
+  </div>
+  <button class="btn btn-primary btn-sm" type="submit">Aplicar filtro</button>
+</form>
+
+<div class="stat-grid">$CARDS</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+  <div class="panel"><h2>Visitas de los últimos 7 días</h2>
+    <div class="chart-bars">$BARS</div>
+    <div class="hint" style="display:flex;justify-content:space-between">$DAYS</div>
+  </div>
+  <div class="panel"><h2>Actividad reciente</h2>
+    <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Evento</th><th>Fecha</th></tr></thead>
+      <tbody>$RECENT</tbody></table></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+  <div class="panel"><h2>Productos más visitados</h2>
+    <table><thead><tr><th>Producto</th><th>Visitas</th></tr></thead><tbody>$TOP_VIEWED</tbody></table></div>
+  <div class="panel"><h2>Productos más vendidos</h2>
+    <table><thead><tr><th>Producto</th><th>Unidades</th></tr></thead><tbody>$TOP_SOLD</tbody></table></div>
+</div>

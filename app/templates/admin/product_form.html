@@ -1,0 +1,39 @@
+<form class="panel" method="post" action="$ACTION">
+  $CSRF
+  <div class="form-grid">
+    <div class="field full"><label for="name">Nombre *</label><input id="name" name="name" value="$NAME" required></div>
+    <div class="field"><label>Slug (opcional)</label><input name="slug" value="$SLUG"></div>
+    <div class="field"><label>SKU</label><input name="sku" value="$SKU"></div>
+    <div class="field"><label>Categoría</label><select name="category_id">$CATEGORY_OPTIONS</select></div>
+    <div class="field"><label>Proveedor</label><select name="supplier_id">$SUPPLIER_OPTIONS</select></div>
+    <div class="field full"><label>Descripción corta</label><input name="short_description" value="$SHORT" maxlength="220"></div>
+    <div class="field full"><label>Descripción completa</label><textarea name="description" rows="5">$DESCRIPTION</textarea></div>
+    <div class="field"><label>Modalidad *</label><select name="modality">
+      <option value="stock"$MODALITY_STOCK>Disponible en inventario</option>
+      <option value="order"$MODALITY_ORDER>Bajo pedido</option></select></div>
+    <div class="field"><label>Estado de publicación</label><select name="status">$STATUS_OPTIONS</select></div>
+    <div class="field"><label>Precio de venta (COP) *</label><input name="price" type="number" min="1" value="$PRICE" required></div>
+    <div class="field"><label>Precio anterior (COP)</label><input name="compare_price" type="number" min="0" value="$COMPARE"></div>
+    <div class="field"><label>Costo de adquisición (COP)</label><input name="cost" type="number" min="0" value="$COST"></div>
+    <div class="field"><label>Existencia inicial</label><input name="stock" type="number" min="0" value="$STOCK" $EDITING_DISABLED><small class="hint">$STOCK_HINT</small></div>
+    <div class="field"><label>Alerta de stock bajo</label><input name="low_stock_threshold" type="number" min="0" value="$THRESHOLD"></div>
+    <div class="field"><label>Entrega local (horas)</label><input name="delivery_hours" type="number" min="0" value="$DELIVERY_HOURS"></div>
+    <div class="field"><label>Importación estimada (días)</label><input name="import_days" type="number" min="0" value="$IMPORT_DAYS"></div>
+    <div class="field full"><label>Enlace del proveedor</label><input name="supplier_url" type="url" value="$SUPPLIER_URL" placeholder="https://..."></div>
+    <div class="field full"><label>Etiquetas (separadas por coma)</label><input name="tags" value="$TAGS"></div>
+    <div class="field full"><label>Características ( Una por línea: Color: Rojo )</label><textarea name="attributes" rows="4">$SPECS</textarea></div>
+    <div class="field full"><label>Productos relacionados (IDs separados por coma)</label><input name="related_ids" value="$RELATED_IDS"></div>
+    <div class="field"><label>SEO: título individual</label><input name="seo_title" value="$SEO_TITLE"></div>
+    <div class="field"><label>SEO: descripción individual</label><input name="seo_description" value="$SEO_DESCRIPTION"></div>
+  </div>
+  <div class="form-grid" style="margin-top:.5rem">
+    <label class="checkline"><input type="checkbox" name="featured" value="1"$FEATURED> Destacado</label>
+    <label class="checkline"><input type="checkbox" name="best_seller" value="1"$BEST> Más vendido</label>
+    <label class="checkline"><input type="checkbox" name="is_new" value="1"$NEW> Novedad</label>
+  </div>
+  <div style="margin-top:1rem"><button class="btn btn-primary" type="submit">Guardar producto</button>
+    <a class="btn btn-ghost" href="/admin/products">Cancelar</a></div>
+</form>
+
+$IMAGE_PANEL
+$FORM_PANEL

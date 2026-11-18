@@ -1,0 +1,27 @@
+<div style="display:grid;grid-template-columns:1.4fr .6fr;gap:1.2rem">
+  <div class="panel">
+    <h2>$CODE <span class="status-tag warn">$STATUS</span></h2>
+    <table class="spec-table">
+      <tr><td>Cliente</td><td>$CUSTOMER · $PHONE · $EMAIL</td></tr>
+      <tr><td>Entrega</td><td>$ADDRESS</td></tr>
+      <tr><td>Fecha</td><td>$CREATED</td></tr>
+      <tr><td>Modalidad</td><td>$MODALITY</td></tr>
+      <tr><td>Notas</td><td>$NOTES</td></tr>
+    </table>
+    <h3>Productos</h3>
+    <table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Modalidad</th></tr></thead><tbody>$ITEMS</tbody></table>
+    <p style="text-align:right">Subtotal: $SUBTOTAL · Envío: $SHIPPING · <strong>Total: $TOTAL</strong></p>
+  </div>
+  <div class="panel">
+    <h3>Cambiar estado</h3>
+    <form method="post" action="/admin/orders/$ORDER_ID/status">
+      $CSRF
+      <div class="field"><label>Nuevo estado</label><select name="status">$STATUS_OPTIONS</select></div>
+      <div class="field"><label>Nota</label><textarea name="note" rows="2"></textarea></div>
+      <button class="btn btn-primary btn-sm" type="submit">Actualizar</button>
+    </form>
+  </div>
+</div>
+<div class="panel"><h2>Historial de cambios</h2>
+  <table><thead><tr><th>Fecha</th><th>Desde</th><th>Hacia</th><th>Nota</th><th>Usuario</th></tr></thead><tbody>$HISTORY</tbody></table>
+</div>

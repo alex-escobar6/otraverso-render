@@ -1,0 +1,29 @@
+<div class="panel">
+  <h2>Nuevo movimiento de inventario</h2>
+  <form class="form-grid" method="post" action="/admin/inventory/movement">
+    $CSRF
+    <div class="field"><label>Producto</label><select name="product_id" required>$PRODUCT_OPTIONS</select></div>
+    <div class="field"><label>Tipo</label><select name="movement_type">
+      <option value="entry">Entrada</option><option value="exit">Salida</option><option value="adjustment">Ajuste (+/-)</option></select></div>
+    <div class="field"><label>Cantidad</label><input name="quantity" type="number" required></div>
+    <div class="field"><label>Costo unitario (COP, solo entradas)</label><input name="cost_cents" type="number" min="0" value="0"></div>
+    <div class="field full"><label>Nota</label><input name="note" maxlength="500"></div>
+    <div class="field full"><button class="btn btn-primary" type="submit">Registrar movimiento</button></div>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Alertas de inventario bajo</h2><ul>$ALERTS</ul>
+</div>
+
+<div class="panel">
+  <h2>Existencias</h2>
+  <div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Alerta</th><th>Costo</th><th>Estado</th><th></th></tr></thead>
+    <tbody>$ROWS</tbody></table></div>
+</div>
+
+<div class="panel">
+  <h2>Historial de movimientos — $SCOPE</h2>
+  <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Costo</th><th>Nota</th><th>Usuario</th></tr></thead>
+    <tbody>$HISTORY</tbody></table></div>
+</div>

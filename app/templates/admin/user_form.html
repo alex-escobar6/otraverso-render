@@ -1,0 +1,10 @@
+<div class="panel">
+  <form class="form-grid" method="post" action="$ACTION">
+    $CSRF
+    <div class="field"><label>Nombre</label><input name="name" required></div>
+    <div class="field"><label>Correo</label><input name="email" type="email" required></div>
+    <div class="field"><label>Rol</label><select name="role_id">$ROLE_OPTIONS</select></div>
+    <div class="field"><label>Contraseña (mínimo 10 caracteres)</label><input name="password" type="password"></div>
+    <div class="field full"><button class="btn btn-primary" type="submit">Guardar usuario</button></div>
+  </form>
+</div>

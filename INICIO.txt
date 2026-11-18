@@ -1,0 +1,19 @@
+INSTRUCTIVO RÁPIDO - OTRAVERSO
+Ruta: /home/sistemas/otraverso
+
+1) cd /home/sistemas/otraverso
+2) cp .env.example .env
+   (edita .env: SECRET_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, BASE_URL, WHATSAPP_DEFAULT)
+3) python3 scripts/init_db.py
+4) python3 scripts/serve.py
+
+Abrir en el navegador: http://127.0.0.1:8000
+
+Nota: si no pones credenciales en .env, init_db.py crea un admin temporal en
+data/bootstrap_admin.txt (cámbialo tras el primer ingreso).
+
+Otros comandos:
+- Pruebas:        python3 -m unittest discover -s tests -v
+- Crear admin:    python3 scripts/create_admin.py --email usuario@ejemplo.com
+- Backup:         python3 scripts/backup.py
+- Restaurar:      python3 scripts/restore.py otraverso_AAAAMMDD_HHMMSS_cli.db --confirm
