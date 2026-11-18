@@ -1,6 +1,6 @@
 # Fases de OTRAVERSO
 
-  Estado actual: **Fases 1 a 8 completadas**. SHOP funcional, PLAY con NEXUS RUSH disponible y hub ligero sin WebGL.
+  Estado actual: **Fases 1 a 9 completadas**. SHOP funcional, PLAY con NEXUS RUSH disponible y galaxia original restaurada.
 
 | Fase | Objetivo | Resultado |
 | --- | --- | --- |
@@ -12,6 +12,7 @@
 | 6 | Entrega | README, documentación, `.env.example`, `.gitignore`, scripts de backup/restore/create_admin y verificación final. |
 | 7 | Universo 3D y PLAY | Hub dimensional con portales, transiciones 3D, SHOP conectado, PLAY y NEXUS RUSH con tres circuitos, audio procedural, récord local, calidad adaptativa y fallback. |
 | 8 | Optimización profunda | Diagnóstico del bloqueo por servidor obsoleto, hub rediseñado con SVG/CSS 3D sin WebGL, juego migrado a Canvas 2D con carga diferida, loader no bloqueante, timeout/reintento y verificación de rendimiento. |
+| 9 | Restauración de la galaxia original | Recuperación selectiva desde `f97502a`, viaje cinematográfico a SHOP, fallback CSS, apagado seguro del loader, ajustes de renderer/partículas y PLAY aislado en `play.css`/`play.js`. |
 
 ## Criterios cumplidos
 

@@ -6,7 +6,7 @@ Plataforma digital modular con identidad propia. La primera versión funcional e
 
 ## Estado
 
-- Hub dimensional ligero: ciudad SVG en capas, CSS 3D, portales con profundidad y transiciones de perspectiva sin WebGL.
+- Galaxia original restaurada: Three.js/WebGL con planetas animados, órbitas, nebulosas y viaje cinematográfico a SHOP; fallback CSS si WebGL no está disponible.
 - PLAY: `/play` y `/play/nexus-rush` con NEXUS RUSH (tres circuitos, turbo, obstáculos, energía, récord local y audio procedural).
 - SHOP: inicio, catálogo con filtros y búsqueda, categorías, ficha de producto, cobertura y páginas informativas.
 - Modalidades: `stock` (inventario real) y `order` (bajo pedido/importación), claramente diferenciadas.
@@ -55,7 +55,7 @@ app/
   modules/    portal, play, shop, admin
   services/   catálogo, inventario, pedidos, WhatsApp, cobertura, analítica
   templates/  HTML por universo y panel
-   static/     CSS/SVG propios, universe-core (SPA ligera), galaxy (hub) y nexus-rush (Canvas 2D, carga diferida)
+   static/     galaxy.css/galaxy.js + three.min.js (galaxia original), play.css/play.js/universe-core.js/nexus-rush.js (PLAY)
   config.py   Variables de entorno
   db.py       Esquema, migraciones y semilla
   security.py Hash, tokens y saneamiento
@@ -76,8 +76,9 @@ tests/        Suite de integración con BD temporal
 - Los récords de NEXUS RUSH se guardan en `localStorage` del navegador (`otraverso.nexus.best.v1`).
 - Controles de NEXUS RUSH: flechas/WASD, Espacio turbo, Shift salto, P pausa, R reiniciar, Esc salir; también hay controles táctiles.
 - El audio se genera con WebAudio desde código; no hay archivos de audio ni licencias externas.
-- La portada no crea contextos WebGL ni render loops; `three.min.js` permanece en el repositorio pero no se solicita.
-- `nexus-rush.js` se carga dinámicamente solo cuando se inicia un circuito, con timeout y botón de reintento.
+- La portada usa la galaxia original con Three.js; se limitan partículas, segmentos, DPR y bloom, y se pausa al ocultar la pestaña.
+- El loader tiene apagado automático por JS y por CSS; si falla WebGL aparece la galaxia de respaldo en CSS.
+- `nexus-rush.js` se carga dinámicamente solo desde PLAY al iniciar un circuito, con timeout y botón de reintento.
 
 ## Documentación
 
