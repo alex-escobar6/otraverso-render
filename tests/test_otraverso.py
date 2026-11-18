@@ -264,7 +264,7 @@ class OtraversoTests(unittest.TestCase):
         self.assertTrue(status.startswith("200"))
         for marker in ('class="galaxy-stage"', 'data-world="shop"', 'data-warp'):
             self.assertIn(marker, body)
-        for absent in ('data-camera=', 'explore-object', 'data-discovery-progress', 'class="skip-link"'):
+        for absent in ('data-camera=', 'explore-object', 'class="skip-link"'):
             self.assertNotIn(absent, body)
         root = Path(__file__).resolve().parents[1]
         css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
@@ -281,6 +281,56 @@ class OtraversoTests(unittest.TestCase):
             self.assertNotIn("/static/js/vendor/three.min.js", body)
         enabled = {row["code"] for row in query("SELECT code FROM modules WHERE enabled=1")}
         self.assertEqual(enabled, {"portal", "shop"})
+
+    def test_14_deep_camera_stage(self) -> None:
+        status, _, body = Client().call("/")
+        self.assertTrue(status.startswith("200"))
+        self.assertIn("Arrastra y haz zoom para explorar", body)
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
+        js = (root / "app/static/js/galaxy.js").read_text(encoding="utf-8")
+        self.assertIn("touch-action:none", css)
+        for marker in (
+            "var MIN_ZOOM = 0.35;", "var MAX_ZOOM = 7.2;", "function clampCamera",
+            "function layerState", "function applyLayer", "function zoomAt",
+            "function panBy", "function applyKeys", "function forEachTile",
+        ):
+            self.assertIn(marker, js)
+        self.assertNotIn("/static/js/vendor/three.min.js", body)
+
+    def test_15_alien_ship_secret_stage(self) -> None:
+        status, _, body = Client().call("/")
+        self.assertTrue(status.startswith("200"))
+        self.assertIn('data-secret-note role="status" aria-live="polite" hidden', body)
+        self.assertIn("SEÑAL NO CATALOGADA", body)
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
+        js = (root / "app/static/js/galaxy.js").read_text(encoding="utf-8")
+        self.assertIn(".galaxy-secret.is-visible", css)
+        for marker in (
+            "id: 'alien-ship'", "function syncSecretPosition", "function secretScreen",
+            "function secretTargetOpacity", "function updateSecrets", "function drawShipSecret",
+            "function findSecretHit", "function revealSecret", "revealSecret(findSecretHit(point))",
+        ):
+            self.assertIn(marker, js)
+        self.assertNotIn("/static/js/vendor/three.min.js", body)
+
+    def test_16_universe_marble_and_discoveries_stage(self) -> None:
+        status, _, body = Client().call("/")
+        self.assertTrue(status.startswith("200"))
+        self.assertIn('data-discovery-progress aria-live="polite" hidden', body)
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "app/static/css/galaxy.css").read_text(encoding="utf-8")
+        js = (root / "app/static/js/galaxy.js").read_text(encoding="utf-8")
+        self.assertIn("ESFERA PRISMA", js)
+        self.assertIn(".galaxy-discoveries", css)
+        for marker in (
+            "id: 'universe-marble'", "kind: 'marble'", "function drawMarbleSecret",
+            "function drawSecrets", "function loadDiscoveries", "function saveDiscoveries",
+            "function registerSecret", "function updateDiscoveryProgress", "otraverso.discoveries.v1",
+        ):
+            self.assertIn(marker, js)
+        self.assertNotIn("/static/js/vendor/three.min.js", body)
 
 
 if __name__ == "__main__":

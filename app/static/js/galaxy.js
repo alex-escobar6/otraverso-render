@@ -8,6 +8,8 @@
   var ui = stage.querySelector('.galaxy-ui');
   var nodes = Array.prototype.slice.call(stage.querySelectorAll('.world-node'));
   var indexItems = Array.prototype.slice.call(stage.querySelectorAll('[data-index]'));
+  var secretNote = stage.querySelector('[data-secret-note]');
+  var discoveryProgress = stage.querySelector('[data-discovery-progress]');
   var dialogs = {};
   Array.prototype.forEach.call(document.querySelectorAll('.world-detail[data-dialog]'), function (dialog) {
     dialogs[dialog.getAttribute('data-dialog')] = dialog;
@@ -75,10 +77,11 @@
   var ry = 0;
   var mobile = false;
   var medium = false;
-  var stars = [];
+  var starLayers = [];
   var spiral = [];
   var dust = [];
   var nebula = null;
+  var nebulaRect = null;
   var pointer = { x: 0, y: 0, tx: 0, ty: 0 };
   var t = 0;
   var orbitalTime = 0;
@@ -92,12 +95,36 @@
   var lastTrigger = null;
   var warp = null;
   var warpProgress = 0;
-  var view = { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 };
+  var view = { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1, vx: 0, vy: 0 };
+  var viewInit = false;
+  var keys = {};
+  var pointers = {};
+  var pinch = null;
+  var MIN_ZOOM = 0.35;
+  var MAX_ZOOM = 7.2;
+  var BOUND_FACTOR = 3.2;
+  var ZOOM_SPEED = 0.0013;
+  var FINE_ZOOM_SPEED = 0.00045;
   var drag = null;
   var events = [];
   var eventClock = 0;
   var eventNext = 1400;
   var eventsSeeded = false;
+  var discoveryKey = 'otraverso.discoveries.v1';
+  var discoveries = {};
+  var secrets = [];
+  loadDiscoveries();
+  registerSecret({
+    id: 'alien-ship', kind: 'ship', note: 'SEÑAL NO CATALOGADA · NAVE EXTRATERRESTRE DETECTADA',
+    factorX: 4.6, factorY: -3.2, driftX: 0.1, driftY: 0.08,
+    size: 22, minSize: 13, maxSize: 42, hitRadius: 24
+  });
+  registerSecret({
+    id: 'universe-marble', kind: 'marble', note: 'ESFERA PRISMA · UNIVERSO INTERNO DETECTADO',
+    factorX: 3.8, factorY: 3.4, driftX: 0.08, driftY: 0.07,
+    size: 26, minSize: 16, maxSize: 52, hitRadius: 26
+  });
+  updateDiscoveryProgress();
 
   function hexRgb(value) {
     var hex = String(value || '#ffffff').replace('#', '');
@@ -195,24 +222,131 @@
     ctx.restore();
   }
 
+  function worldBounds() {
+    return {
+      left: W / 2 - W * BOUND_FACTOR,
+      right: W / 2 + W * BOUND_FACTOR,
+      top: H / 2 - H * BOUND_FACTOR,
+      bottom: H / 2 + H * BOUND_FACTOR
+    };
+  }
+
+  function clampCamera() {
+    var bounds = worldBounds();
+    var halfW = W / (2 * view.tz);
+    var halfH = H / (2 * view.tz);
+    view.tz = clamp(view.tz, MIN_ZOOM, MAX_ZOOM);
+    view.tx = bounds.right - bounds.left < halfW * 2 ? W / 2 : clamp(view.tx, bounds.left + halfW, bounds.right - halfW);
+    view.ty = bounds.bottom - bounds.top < halfH * 2 ? H / 2 : clamp(view.ty, bounds.top + halfH, bounds.bottom - halfH);
+  }
+
+  function layerState(depth) {
+    var zoom = Math.pow(view.z, depth);
+    return {
+      x: W / 2 + (view.x - W / 2) * depth,
+      y: H / 2 + (view.y - H / 2) * depth,
+      z: zoom
+    };
+  }
+
+  function applyLayer(depth) {
+    var layer = layerState(depth);
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(layer.z, layer.z);
+    ctx.translate(-layer.x, -layer.y);
+  }
+
   function applyView() {
-    if (view.x === 0 && view.y === 0 && view.z === 1) return;
-    ctx.translate(W / 2 + view.x, H / 2 + view.y);
-    ctx.scale(view.z, view.z);
-    ctx.translate(-W / 2, -H / 2);
+    applyLayer(1);
+  }
+
+  function applyWarp() {
+    if (!warp) return;
+    var zoom = 1 + warpProgress * 3.6;
+    ctx.translate(warp.x, warp.y);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-warp.x, -warp.y);
+  }
+
+  function screenToWorld(x, y) {
+    return {
+      x: view.tx + (x - W / 2) / view.tz,
+      y: view.ty + (y - H / 2) / view.tz
+    };
+  }
+
+  function panBy(dx, dy) {
+    view.tx -= dx / view.tz;
+    view.ty -= dy / view.tz;
+    clampCamera();
+  }
+
+  function zoomAt(x, y, factor) {
+    var next = clamp(view.tz * factor, MIN_ZOOM, MAX_ZOOM);
+    if (next === view.tz) return;
+    var point = screenToWorld(x, y);
+    view.tx = point.x - (x - W / 2) / next;
+    view.ty = point.y - (y - H / 2) / next;
+    view.tz = next;
+    clampCamera();
   }
 
   function updateView(delta) {
-    var ease = 1 - Math.pow(0.9, delta / 16.67);
+    if (reduce) {
+      clampCamera();
+      view.x = view.tx;
+      view.y = view.ty;
+      view.z = view.tz;
+      return;
+    }
+    if (!drag && !pinch) {
+      view.tx += view.vx * delta * 0.6;
+      view.ty += view.vy * delta * 0.6;
+      var decay = Math.pow(0.9, delta / 16.67);
+      view.vx *= decay;
+      view.vy *= decay;
+      if (Math.abs(view.vx) < 0.00002) view.vx = 0;
+      if (Math.abs(view.vy) < 0.00002) view.vy = 0;
+    }
+    clampCamera();
+    var ease = 1 - Math.pow(0.86, delta / 16.67);
     view.x += (view.tx - view.x) * ease;
     view.y += (view.ty - view.y) * ease;
     view.z += (view.tz - view.z) * ease;
+    var bounds = worldBounds();
+    var halfW = W / (2 * view.z);
+    var halfH = H / (2 * view.z);
+    view.x = bounds.right - bounds.left < halfW * 2 ? W / 2 : clamp(view.x, bounds.left + halfW, bounds.right - halfW);
+    view.y = bounds.bottom - bounds.top < halfH * 2 ? H / 2 : clamp(view.y, bounds.top + halfH, bounds.bottom - halfH);
+  }
+
+  function applyKeys(delta) {
+    var step = 260 * delta / 1000 / view.tz;
+    if (keys.left) view.tx -= step;
+    if (keys.right) view.tx += step;
+    if (keys.up) view.ty -= step;
+    if (keys.down) view.ty += step;
+    if (keys.zoomIn) zoomAt(W / 2, H / 2, 1 + delta * 0.0007);
+    if (keys.zoomOut) zoomAt(W / 2, H / 2, 1 - delta * 0.0007);
+    clampCamera();
   }
 
   function resetView() {
-    view.tx = 0;
-    view.ty = 0;
+    view.tx = W / 2;
+    view.ty = H / 2;
     view.tz = 1;
+    view.vx = 0;
+    view.vy = 0;
+  }
+
+  function requestRender() {
+    if (reduce) {
+      clampCamera();
+      view.x = view.tx;
+      view.y = view.ty;
+      view.z = view.tz;
+    }
+    if (!running) render();
   }
 
   function drawPointerAura() {
@@ -246,17 +380,23 @@
 
   function buildScene() {
     var area = W * H;
-    stars = [];
-    var starCount = lowPower ? 70 : mobile ? 110 : Math.min(270, Math.round(area / 5200));
-    for (var i = 0; i < starCount; i++) {
-      stars.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        z: 0.25 + Math.random() * 0.9,
-        s: Math.random() < 0.07 ? 1.8 + Math.random() * 0.8 : 0.5 + Math.random() * 1,
-        p: Math.random() * TAU,
-        c: Math.random() < 0.22 ? hexRgb('#9bdcff') : Math.random() < 0.2 ? hexRgb('#d4b5ff') : [235, 240, 255]
-      });
+    starLayers = [];
+    var starCount = lowPower ? 200 : mobile ? 280 : 420;
+    var nearCount = Math.round(starCount * 0.45);
+    for (var layerIndex = 0; layerIndex < 2; layerIndex++) {
+      var count = layerIndex ? nearCount : starCount - nearCount;
+      var layer = { depth: layerIndex ? 0.72 : 0.46, points: [] };
+      for (var i = 0; i < count; i++) {
+        layer.points.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          z: 0.25 + Math.random() * 0.9,
+          s: Math.random() < 0.07 ? 1.8 + Math.random() * 0.8 : 0.5 + Math.random() * 1,
+          p: Math.random() * TAU,
+          c: Math.random() < 0.22 ? hexRgb('#9bdcff') : Math.random() < 0.2 ? hexRgb('#d4b5ff') : [235, 240, 255]
+        });
+      }
+      starLayers.push(layer);
     }
 
     spiral = [];
@@ -287,6 +427,7 @@
     }
 
     if (!ctx) return;
+    nebulaRect = { x: cx - W * 1.6, y: cy - H * 1.6, w: W * 3.2, h: H * 3.2 };
     var nw = Math.max(2, Math.round(W / 2));
     var nh = Math.max(2, Math.round(H / 2));
     nebula = document.createElement('canvas');
@@ -321,8 +462,14 @@
     W = Math.max(1, rect.width);
     H = Math.max(1, rect.height);
     M = Math.min(W, H);
-    view.tx = clamp(view.tx, -W * 0.12, W * 0.12);
-    view.ty = clamp(view.ty, -H * 0.1, H * 0.1);
+    if (!viewInit) {
+      view.x = view.tx = W / 2;
+      view.y = view.ty = H / 2;
+      viewInit = true;
+    }
+    clampCamera();
+    view.x = clamp(view.x, W / 2 - W * BOUND_FACTOR, W / 2 + W * BOUND_FACTOR);
+    view.y = clamp(view.y, H / 2 - H * BOUND_FACTOR, H / 2 + H * BOUND_FACTOR);
     mobile = window.innerWidth < 760;
     medium = !mobile && W < 1200;
     DPR = Math.min(window.devicePixelRatio || 1, lowPower ? 1 : 1.6);
@@ -339,6 +486,11 @@
     cy = H * (mobile ? 0.64 : 0.5);
     rx = M * (mobile ? 0.4 : medium ? 0.24 : 0.36);
     ry = rx * (mobile ? 0.54 : 0.46);
+    for (var secretIndex = 0; secretIndex < secrets.length; secretIndex++) {
+      var secret = secrets[secretIndex];
+      secret.baseX = cx + rx * secret.factorX;
+      secret.baseY = cy + ry * secret.factorY;
+    }
     buildScene();
     if (!eventsSeeded) {
       events.push(makeEvent());
@@ -373,11 +525,11 @@
       var active = hovered === world.id || openId === world.id || document.activeElement === element;
       element.style.left = '0px';
       element.style.top = '0px';
-      var vx = (state.x - cx) * view.z + cx + view.x;
-      var vy = (state.y - cy) * view.z + cy + view.y;
+      var vx = (state.x - view.x) * view.z + W / 2;
+      var vy = (state.y - view.y) * view.z + H / 2;
       element.style.transform = 'translate3d(' + vx.toFixed(2) + 'px,' + vy.toFixed(2) + 'px,0) translate(-50%,-50%)';
       element.style.zIndex = String(10 + Math.round((state.depth + 1) * 8));
-      element.style.setProperty('--node-r', Math.max(14, state.r * view.z).toFixed(1) + 'px');
+      element.style.setProperty('--node-r', clamp(state.r * view.z, 10, M * 0.7).toFixed(1) + 'px');
       element.classList.toggle('is-active', !!active);
       if (indexById[world.id]) indexById[world.id].classList.toggle('is-active', !!active);
     });
@@ -391,48 +543,89 @@
     background.addColorStop(1, '#02030a');
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, W, H);
-    if (!nebula) return;
+  }
+
+  function forEachTile(layer, callback) {
+    var marginX = W * 0.35;
+    var marginY = H * 0.35;
+    var left = layer.x - W / (2 * layer.z) - marginX;
+    var right = layer.x + W / (2 * layer.z) + marginX;
+    var top = layer.y - H / (2 * layer.z) - marginY;
+    var bottom = layer.y + H / (2 * layer.z) + marginY;
+    var minX = Math.floor(left / W);
+    var maxX = Math.floor(right / W);
+    var minY = Math.floor(top / H);
+    var maxY = Math.floor(bottom / H);
+    var tiles = (maxX - minX + 1) * (maxY - minY + 1);
+    var step = tiles > 8 ? 3 : tiles > 2 ? 2 : 1;
+    for (var tx = minX; tx <= maxX; tx++) {
+      for (var ty = minY; ty <= maxY; ty++) {
+        for (var i = 0; i < layer.points.length; i += step) {
+          var point = layer.points[i];
+          callback(point, point.x + tx * W, point.y + ty * H, i + tx * 31 + ty * 17);
+        }
+      }
+    }
+  }
+
+  function drawNebula() {
+    if (!nebula || !nebulaRect) return;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.9;
     var dx = Math.sin(t * 0.00005) * 12 + pointer.x * 8;
     var dy = Math.cos(t * 0.00004) * 9 + pointer.y * 6;
-    ctx.drawImage(nebula, dx - 10, dy - 10, W + 20, H + 20);
+    ctx.drawImage(nebula, nebulaRect.x + dx, nebulaRect.y + dy, nebulaRect.w, nebulaRect.h);
     ctx.restore();
   }
 
   function drawStars() {
-    for (var i = 0; i < stars.length; i++) {
-      var star = stars[i];
-      var x = star.x + pointer.x * 16 * star.z;
-      var y = star.y + pointer.y * 11 * star.z;
-      if (x < -6 || x > W + 6 || y < -6 || y > H + 6) continue;
-      var twinkle = 0.45 + 0.55 * Math.sin(t * 0.0012 * star.z + star.p);
-      var burst = !lowPower && star.z > 0.86 ? Math.pow(Math.max(0, Math.sin(t * 0.00031 + star.p * 2.7)), 14) * (star.z - 0.86) * 6.5 : 0;
-      var size = star.s * star.z;
-      if (burst > 0.03) {
-        ctx.fillStyle = rgba(star.c, burst * 0.13);
-        ctx.beginPath();
-        ctx.arc(x, y, size * 3.4, 0, TAU);
-        ctx.fill();
-      }
-      ctx.fillStyle = rgba(star.c, Math.min(0.95, 0.12 + twinkle * 0.52 * star.z + burst * 0.5));
-      ctx.fillRect(x, y, size, size);
-      if (star.s > 1.8 || burst > 0.24) {
-        ctx.strokeStyle = rgba(star.c, Math.min(0.7, 0.16 + twinkle * 0.22 + burst * 0.4));
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(x - 5 - burst * 3, y);
-        ctx.lineTo(x + 5 + burst * 3, y);
-        ctx.moveTo(x, y - 5 - burst * 3);
-        ctx.lineTo(x, y + 5 + burst * 3);
-        ctx.stroke();
-      }
+    for (var l = 0; l < starLayers.length; l++) {
+      var layer = starLayers[l];
+      if (view.z > 4.5 && layer.depth < 0.6) continue;
+      var state = layerState(layer.depth);
+      state.points = layer.points;
+      ctx.save();
+      applyLayer(layer.depth);
+      applyWarp();
+      ctx.globalCompositeOperation = 'lighter';
+      forEachTile(state, function (star, x, y, seed) {
+        if (view.z < 0.6 && star.s < 1) return;
+        var px = x + pointer.x * 16 * star.z * layer.depth;
+        var py = y + pointer.y * 11 * star.z * layer.depth;
+        var twinkle = 0.45 + 0.55 * Math.sin(t * 0.0012 * star.z + seed);
+        var burst = !lowPower && view.z < 3 && star.z > 0.86
+          ? Math.pow(Math.max(0, Math.sin(t * 0.00031 + seed * 0.7)), 14) * (star.z - 0.86) * 6.5
+          : 0;
+        var size = star.s * star.z * (layer.depth > 0.6 ? 1 : 0.8);
+        if (burst > 0.03) {
+          ctx.fillStyle = rgba(star.c, burst * 0.13);
+          ctx.beginPath();
+          ctx.arc(px, py, size * 3.4, 0, TAU);
+          ctx.fill();
+        }
+        ctx.fillStyle = rgba(star.c, Math.min(0.95, 0.12 + twinkle * 0.52 * star.z + burst * 0.5));
+        ctx.fillRect(px, py, size, size);
+        if (star.s > 1.8 || burst > 0.24) {
+          ctx.strokeStyle = rgba(star.c, Math.min(0.7, 0.16 + twinkle * 0.22 + burst * 0.4));
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(px - 5 - burst * 3, py);
+          ctx.lineTo(px + 5 + burst * 3, py);
+          ctx.moveTo(px, py - 5 - burst * 3);
+          ctx.lineTo(px, py + 5 + burst * 3);
+          ctx.stroke();
+        }
+      });
+      ctx.restore();
     }
   }
 
   function drawSpiral() {
     var rotation = t * 0.000035;
+    var state = layerState(0.74);
+    var halfW = W / (2 * state.z) + 40;
+    var halfH = H / (2 * state.z) + 40;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < spiral.length; i++) {
@@ -440,6 +633,7 @@
       var angle = particle.a + rotation;
       var x = cx + Math.cos(angle) * particle.r + pointer.x * 5;
       var y = cy + Math.sin(angle) * particle.r * 0.33 + pointer.y * 3;
+      if (x < state.x - halfW || x > state.x + halfW || y < state.y - halfH || y > state.y + halfH) continue;
       var alpha = particle.alpha * (0.62 + 0.38 * Math.sin(t * 0.001 + particle.p));
       ctx.fillStyle = rgba(particle.c, alpha);
       ctx.fillRect(x, y, particle.s, particle.s);
@@ -867,17 +1061,20 @@
   }
 
   function drawDust() {
+    if (view.z < 0.5 || lowPower) return;
+    var layer = { depth: 1.14, x: layerState(1.14).x, y: layerState(1.14).y, z: layerState(1.14).z, points: dust };
     ctx.save();
+    applyLayer(1.14);
+    applyWarp();
     ctx.globalCompositeOperation = 'lighter';
-    for (var i = 0; i < dust.length; i++) {
-      var particle = dust[i];
-      var distance = Math.sqrt(Math.pow(particle.x - cx, 2) + Math.pow(particle.y - cy, 2));
-      var influence = Math.max(0, 1 - distance / 320);
-      var x = particle.x + pointer.x * 30 * influence + Math.sin(t * 0.0004 + particle.p) * 5;
-      var y = particle.y + pointer.y * 24 * influence + Math.cos(t * 0.00035 + particle.p) * 5;
+    forEachTile(layer, function (particle, x, y) {
+      var distance = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+      var influence = Math.max(0, 1 - distance / 420);
+      var px = x + pointer.x * 30 * influence + Math.sin(t * 0.0004 + particle.p) * 5;
+      var py = y + pointer.y * 24 * influence + Math.cos(t * 0.00035 + particle.p) * 5;
       ctx.fillStyle = rgba(particle.c, 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(t * 0.001 + particle.p)));
-      ctx.fillRect(x, y, particle.s, particle.s);
-    }
+      ctx.fillRect(px, py, particle.s, particle.s);
+    });
     ctx.restore();
   }
 
@@ -900,22 +1097,265 @@
     ctx.restore();
   }
 
+  function loadDiscoveries() {
+    try {
+      var raw = window.localStorage.getItem(discoveryKey);
+      discoveries = raw ? JSON.parse(raw) || {} : {};
+    } catch (error) {
+      discoveries = {};
+    }
+  }
+
+  function saveDiscoveries() {
+    try {
+      window.localStorage.setItem(discoveryKey, JSON.stringify(discoveries));
+    } catch (error) {
+      return;
+    }
+  }
+
+  function registerSecret(config) {
+    var secret = {
+      id: config.id,
+      kind: config.kind,
+      note: config.note,
+      factorX: config.factorX,
+      factorY: config.factorY,
+      driftX: config.driftX,
+      driftY: config.driftY,
+      size: config.size,
+      minSize: config.minSize,
+      maxSize: config.maxSize,
+      hitRadius: config.hitRadius,
+      baseX: 0,
+      baseY: 0,
+      x: 0,
+      y: 0,
+      opacity: 0,
+      found: !!discoveries[config.id]
+    };
+    secrets.push(secret);
+    return secret;
+  }
+
+  function updateDiscoveryProgress() {
+    if (!discoveryProgress) return;
+    var count = 0;
+    for (var i = 0; i < secrets.length; i++) {
+      if (secrets[i].found) count++;
+    }
+    discoveryProgress.hidden = count === 0;
+    discoveryProgress.textContent = 'DESCUBRIMIENTOS ' + count + ' / ' + secrets.length;
+  }
+
+  function syncSecretPosition(secret) {
+    var seed = secret.id.length;
+    secret.x = secret.baseX + Math.sin(t * 0.00007 + seed) * W * secret.driftX;
+    secret.y = secret.baseY + Math.cos(t * 0.00005 + seed * 0.7) * H * secret.driftY;
+  }
+
+  function secretScreen(secret) {
+    syncSecretPosition(secret);
+    return {
+      x: (secret.x - view.x) * view.z + W / 2,
+      y: (secret.y - view.y) * view.z + H / 2,
+      size: clamp(secret.size * view.z, secret.minSize, secret.maxSize)
+    };
+  }
+
+  function secretOnScreen(secret) {
+    var screen = secretScreen(secret);
+    return screen.x > -60 && screen.x < W + 60 && screen.y > -60 && screen.y < H + 60;
+  }
+
+  function secretExplored() {
+    return view.z < 1.35 || Math.abs(view.x - W / 2) > W * 0.32 || Math.abs(view.y - H / 2) > H * 0.32;
+  }
+
+  function secretTargetOpacity(secret) {
+    if (!secretOnScreen(secret) || !secretExplored()) return 0;
+    return secret.found ? 0.55 : 0.92;
+  }
+
+  function updateSecrets(delta) {
+    var ease = 1 - Math.pow(0.9, delta / 16.67);
+    for (var i = 0; i < secrets.length; i++) {
+      var secret = secrets[i];
+      syncSecretPosition(secret);
+      secret.opacity += (secretTargetOpacity(secret) - secret.opacity) * ease;
+    }
+  }
+
+  function drawShipSecret(secret, screen, alpha) {
+    var size = screen.size;
+    var pulse = reduce ? 0 : 0.5 + 0.5 * Math.sin(t * 0.0024);
+    var cyan = [84, 232, 255];
+    var ice = [196, 246, 255];
+    var gold = [255, 190, 120];
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha;
+    var halo = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, size * 3);
+    halo.addColorStop(0, rgba(cyan, 0.22 + pulse * 0.12));
+    halo.addColorStop(0.45, rgba(cyan, 0.08));
+    halo.addColorStop(1, rgba(cyan, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(screen.x, screen.y, size * 3, 0, TAU);
+    ctx.fill();
+    ctx.translate(screen.x, screen.y);
+    ctx.rotate(-0.22 + Math.sin(t * 0.00014) * 0.1);
+    ctx.fillStyle = rgba([10, 24, 48], 0.94);
+    ctx.strokeStyle = rgba(cyan, 0.72 + pulse * 0.22);
+    ctx.lineWidth = Math.max(0.8, size * 0.045);
+    ctx.beginPath();
+    ctx.moveTo(-size * 1.55, 0);
+    ctx.lineTo(-size * 0.56, -size * 0.46);
+    ctx.lineTo(size * 0.72, -size * 0.34);
+    ctx.lineTo(size * 1.5, 0);
+    ctx.lineTo(size * 0.72, size * 0.34);
+    ctx.lineTo(-size * 0.56, size * 0.46);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = rgba(ice, 0.72);
+    ctx.beginPath();
+    ctx.ellipse(0, -size * 0.08, size * 0.46, size * 0.2, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = rgba(gold, 0.9);
+    for (var i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.arc(i * size * 0.62, 0, size * 0.07, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawMarbleSecret(secret, screen, alpha) {
+    var size = screen.size;
+    var pulse = reduce ? 0 : 0.5 + 0.5 * Math.sin(t * 0.0018);
+    var cyan = [120, 230, 255];
+    var violet = [178, 140, 255];
+    var ice = [222, 246, 255];
+    var gold = [255, 210, 140];
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha;
+    var halo = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, size * 2.6);
+    halo.addColorStop(0, rgba(violet, 0.2 + pulse * 0.1));
+    halo.addColorStop(0.5, rgba(cyan, 0.07));
+    halo.addColorStop(1, rgba(cyan, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(screen.x, screen.y, size * 2.6, 0, TAU);
+    ctx.fill();
+    ctx.translate(screen.x, screen.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, size, 0, TAU);
+    ctx.save();
+    ctx.clip();
+    var glass = ctx.createRadialGradient(-size * 0.35, -size * 0.4, size * 0.05, 0, 0, size);
+    glass.addColorStop(0, rgba(ice, 0.34));
+    glass.addColorStop(0.48, rgba(violet, 0.16));
+    glass.addColorStop(1, rgba([8, 10, 34], 0.94));
+    ctx.fillStyle = glass;
+    ctx.fillRect(-size, -size, size * 2, size * 2);
+    ctx.rotate(t * 0.00028);
+    for (var i = 0; i < 3; i++) {
+      ctx.strokeStyle = rgba(i === 1 ? violet : cyan, 0.34 + pulse * 0.18);
+      ctx.lineWidth = Math.max(0.7, size * 0.035);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * (0.78 - i * 0.18), size * (0.3 + i * 0.08), i * 0.72, 0, TAU);
+      ctx.stroke();
+    }
+    for (var j = 0; j < 9; j++) {
+      var angle = j * 2.399 + t * 0.0004;
+      var radius = size * (0.12 + ((j * 37) % 70) / 100);
+      ctx.fillStyle = rgba(j % 3 === 0 ? gold : ice, 0.65);
+      ctx.fillRect(Math.cos(angle) * radius, Math.sin(angle) * radius, 1.3, 1.3);
+    }
+    ctx.restore();
+    ctx.strokeStyle = rgba(ice, 0.55 + pulse * 0.2);
+    ctx.lineWidth = Math.max(0.9, size * 0.05);
+    ctx.beginPath();
+    ctx.arc(0, 0, size, 0, TAU);
+    ctx.stroke();
+    ctx.fillStyle = rgba(ice, 0.28);
+    ctx.beginPath();
+    ctx.ellipse(-size * 0.32, -size * 0.38, size * 0.2, size * 0.08, -0.5, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSecrets() {
+    if (warp) return;
+    for (var i = 0; i < secrets.length; i++) {
+      var secret = secrets[i];
+      if (!secretOnScreen(secret)) continue;
+      var alpha = running ? secret.opacity : secretTargetOpacity(secret);
+      if (alpha < 0.02) continue;
+      var screen = secretScreen(secret);
+      if (secret.kind === 'marble') drawMarbleSecret(secret, screen, alpha);
+      else drawShipSecret(secret, screen, alpha);
+    }
+  }
+
+  function findSecretHit(point) {
+    if (warp) return null;
+    for (var i = 0; i < secrets.length; i++) {
+      var secret = secrets[i];
+      if (secret.found || !secretOnScreen(secret)) continue;
+      var alpha = running ? secret.opacity : secretTargetOpacity(secret);
+      if (alpha < 0.28) continue;
+      var screen = secretScreen(secret);
+      var dx = point.x - screen.x;
+      var dy = point.y - screen.y;
+      var radius = Math.max(secret.hitRadius, screen.size * 1.9);
+      if (dx * dx + dy * dy <= radius * radius) return secret;
+    }
+    return null;
+  }
+
+  function revealSecret(secret) {
+    if (!secret || secret.found) return false;
+    secret.found = true;
+    secret.opacity = Math.max(secret.opacity, 0.75);
+    discoveries[secret.id] = true;
+    saveDiscoveries();
+    updateDiscoveryProgress();
+    if (secretNote) {
+      secretNote.textContent = secret.note;
+      secretNote.hidden = false;
+      window.requestAnimationFrame(function () {
+        secretNote.classList.add('is-visible');
+      });
+      window.setTimeout(function () {
+        secretNote.classList.remove('is-visible');
+        window.setTimeout(function () {
+          secretNote.hidden = true;
+        }, 500);
+      }, 7200);
+    }
+    requestRender();
+    return true;
+  }
+
   function render() {
     var states = syncNodes();
     if (!ctx) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    drawBackground();
+    drawPointerAura();
+    drawStars();
+    ctx.save();
+    applyLayer(0.74);
+    applyWarp();
+    drawNebula();
+    drawSpiral();
+    ctx.restore();
     ctx.save();
     applyView();
-    if (warp) {
-      var zoom = 1 + warpProgress * 3.6;
-      ctx.translate(warp.x, warp.y);
-      ctx.scale(zoom, zoom);
-      ctx.translate(-warp.x, -warp.y);
-    }
-    drawBackground();
-    drawStars();
-    drawSpiral();
-    drawPointerAura();
+    applyWarp();
     ctx.save();
     ctx.translate(pointer.x * 12, pointer.y * 8);
     drawCore();
@@ -926,11 +1366,12 @@
       if (world.id === 'shop') drawShopPlanet(world, states[world.id], !!active);
       else drawPlanet(world, states[world.id], !!active);
     });
-    drawDust();
-    ctx.restore();
     drawEvents();
-    if (warp) drawStreaks();
     ctx.restore();
+    ctx.restore();
+    drawDust();
+    drawSecrets();
+    if (warp) drawStreaks();
     if (ui && !coarse) {
       ui.style.setProperty('--ui-x', (-pointer.x * 12).toFixed(1) + 'px');
       ui.style.setProperty('--ui-y', (-pointer.y * 8).toFixed(1) + 'px');
@@ -948,8 +1389,10 @@
     var pointerEase = 1 - Math.pow(0.945, rawDelta / 16.67);
     pointer.x += (pointer.tx - pointer.x) * pointerEase;
     pointer.y += (pointer.ty - pointer.y) * pointerEase;
+    applyKeys(rawDelta);
     updateView(rawDelta);
     updateEvents(delta);
+    updateSecrets(delta);
     if (warp) {
       warpProgress = Math.min(1, (now - warp.start) / 900);
       if (warpProgress >= 1) {
@@ -1063,62 +1506,192 @@
     if (target.closest('[data-close]')) closeDialog(false);
   });
 
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && openId) closeDialog(false);
-  });
+  function localPoint(event) {
+    var rect = stage.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
 
-  window.addEventListener('pointermove', function (event) {
-    if (coarse) return;
-    pointer.tx = Math.max(-1, Math.min(1, event.clientX / W * 2 - 1));
-    pointer.ty = Math.max(-1, Math.min(1, event.clientY / H * 2 - 1));
-  }, { passive: true });
-  stage.addEventListener('pointerleave', function () {
-    pointer.tx = 0;
-    pointer.ty = 0;
-  });
+  function pointerCount() {
+    return Object.keys(pointers).length;
+  }
 
-  function endDrag(event) {
-    if (!drag || drag.id !== event.pointerId) return;
-    drag = null;
-    stage.classList.remove('is-dragging');
+  function pointerCenter() {
+    var ids = Object.keys(pointers);
+    var x = 0;
+    var y = 0;
+    for (var i = 0; i < ids.length; i++) {
+      x += pointers[ids[i]].x;
+      y += pointers[ids[i]].y;
+    }
+    return { x: x / ids.length, y: y / ids.length };
+  }
+
+  function pointerDistance() {
+    var ids = Object.keys(pointers);
+    if (ids.length < 2) return 1;
+    var a = pointers[ids[0]];
+    var b = pointers[ids[1]];
+    return Math.max(1, Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)));
+  }
+
+  function endPointer(event) {
+    delete pointers[event.pointerId];
+    if (pointerCount() < 2) pinch = null;
+    if (drag && drag.id === event.pointerId) {
+      drag = null;
+      stage.classList.remove('is-dragging');
+    }
     if (stage.releasePointerCapture) {
       try { stage.releasePointerCapture(event.pointerId); } catch (error) { return; }
     }
   }
 
-  stage.addEventListener('pointerdown', function (event) {
-    if (reduce || coarse || event.button !== 0) return;
-    if (event.target.closest && event.target.closest('a,button,.galaxy-intro,.galaxy-index,.world-detail')) return;
-    drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
-    if (stage.setPointerCapture) {
-      try { stage.setPointerCapture(event.pointerId); } catch (error) { return; }
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && openId) {
+      closeDialog(false);
+      return;
     }
-    stage.classList.add('is-dragging');
+    if (event.target && event.target.closest && event.target.closest('input,textarea,select,[contenteditable]')) return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (reduce) {
+      if (event.key === 'ArrowLeft') panBy(90, 0);
+      else if (event.key === 'ArrowRight') panBy(-90, 0);
+      else if (event.key === 'ArrowUp') panBy(0, 90);
+      else if (event.key === 'ArrowDown') panBy(0, -90);
+      else if (event.key === '+' || event.key === '=') zoomAt(W / 2, H / 2, 1.18);
+      else if (event.key === '-' || event.key === '_') zoomAt(W / 2, H / 2, 0.85);
+      else if (event.key === '0') resetView();
+      else return;
+      event.preventDefault();
+      requestRender();
+      return;
+    }
+    if (event.key === 'ArrowLeft') keys.left = true;
+    else if (event.key === 'ArrowRight') keys.right = true;
+    else if (event.key === 'ArrowUp') keys.up = true;
+    else if (event.key === 'ArrowDown') keys.down = true;
+    else if (event.key === '+' || event.key === '=') keys.zoomIn = true;
+    else if (event.key === '-' || event.key === '_') keys.zoomOut = true;
+    else if (event.key === '0') {
+      resetView();
+      requestRender();
+      return;
+    } else return;
+    event.preventDefault();
+  });
+
+  document.addEventListener('keyup', function (event) {
+    if (event.key === 'ArrowLeft') keys.left = false;
+    else if (event.key === 'ArrowRight') keys.right = false;
+    else if (event.key === 'ArrowUp') keys.up = false;
+    else if (event.key === 'ArrowDown') keys.down = false;
+    else if (event.key === '+' || event.key === '=') keys.zoomIn = false;
+    else if (event.key === '-' || event.key === '_') keys.zoomOut = false;
   });
 
   window.addEventListener('pointermove', function (event) {
+    var point = localPoint(event);
+    if (!coarse && !reduce) {
+      pointer.tx = clamp(point.x / W * 2 - 1, -1, 1);
+      pointer.ty = clamp(point.y / H * 2 - 1, -1, 1);
+    } else if (reduce) {
+      pointer.tx = 0;
+      pointer.ty = 0;
+    }
+    if (pointers[event.pointerId]) pointers[event.pointerId] = point;
+    if (pinch && pointerCount() >= 2) {
+      event.preventDefault();
+      var center = pointerCenter();
+      var distance = pointerDistance();
+      panBy(center.x - pinch.center.x, center.y - pinch.center.y);
+      zoomAt(center.x, center.y, distance / pinch.distance);
+      pinch.center = center;
+      pinch.distance = distance;
+      requestRender();
+      return;
+    }
     if (!drag || drag.id !== event.pointerId) return;
-    var dx = event.clientX - drag.x;
-    var dy = event.clientY - drag.y;
-    drag.x = event.clientX;
-    drag.y = event.clientY;
-    view.tx = clamp(view.tx + dx, -W * 0.12, W * 0.12);
-    view.ty = clamp(view.ty + dy, -H * 0.1, H * 0.1);
-  }, { passive: true });
+    event.preventDefault();
+    var dx = point.x - drag.x;
+    var dy = point.y - drag.y;
+    var now = performance.now();
+    var dt = Math.max(8, now - drag.time);
+    panBy(dx, dy);
+    if (!reduce) {
+      view.vx = -dx / view.tz / dt * 0.8;
+      view.vy = -dy / view.tz / dt * 0.8;
+    }
+    drag.x = point.x;
+    drag.y = point.y;
+    drag.time = now;
+    requestRender();
+  }, { passive: false });
 
-  window.addEventListener('pointerup', endDrag);
-  window.addEventListener('pointercancel', endDrag);
+  stage.addEventListener('pointerleave', function () {
+    if (!drag) {
+      pointer.tx = 0;
+      pointer.ty = 0;
+    }
+  });
+
+  stage.addEventListener('pointerdown', function (event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.target.closest && event.target.closest('a,button,.galaxy-intro,.galaxy-index,.world-detail')) return;
+    var point = localPoint(event);
+    if (revealSecret(findSecretHit(point))) {
+      event.preventDefault();
+      return;
+    }
+    pointers[event.pointerId] = point;
+    if (stage.setPointerCapture) {
+      try {
+        stage.setPointerCapture(event.pointerId);
+      } catch (error) {
+        delete pointers[event.pointerId];
+        return;
+      }
+    }
+    if (pointerCount() === 2) {
+      pinch = { center: pointerCenter(), distance: pointerDistance() };
+      drag = null;
+      stage.classList.remove('is-dragging');
+      event.preventDefault();
+      return;
+    }
+    if (pointerCount() > 1) return;
+    drag = { id: event.pointerId, x: point.x, y: point.y, time: performance.now() };
+    stage.classList.add('is-dragging');
+    event.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('pointerup', endPointer);
+  window.addEventListener('pointercancel', endPointer);
+  window.addEventListener('blur', function () {
+    keys = {};
+    pointers = {};
+    pinch = null;
+    if (drag) {
+      drag = null;
+      stage.classList.remove('is-dragging');
+    }
+  });
 
   stage.addEventListener('wheel', function (event) {
-    if (reduce || coarse) return;
     if (event.target.closest && event.target.closest('.galaxy-index,.galaxy-intro,.world-detail')) return;
     event.preventDefault();
-    view.tz = clamp(view.tz - event.deltaY * 0.00025, 0.88, 1.18);
+    var delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? H : 1);
+    var speed = event.shiftKey ? FINE_ZOOM_SPEED : ZOOM_SPEED;
+    var point = localPoint(event);
+    zoomAt(point.x, point.y, Math.exp(-delta * speed));
+    view.vx = 0;
+    view.vy = 0;
+    requestRender();
   }, { passive: false });
 
   stage.addEventListener('dblclick', function (event) {
     if (event.target.closest && event.target.closest('a,button,.galaxy-intro,.galaxy-index,.world-detail')) return;
     resetView();
+    requestRender();
   });
 
   var resizeTimer = 0;
