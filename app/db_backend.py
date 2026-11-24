@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import socket
+import urllib.parse
 from collections.abc import Mapping, Sequence
 from typing import Any, Iterable
 
@@ -191,10 +193,20 @@ def connect():
         raise RuntimeError("connect_postgres() llamado sin DATABASE_URL")
     import psycopg
 
-    options = {}
-    if "sslmode=" not in Config.DATABASE_URL.lower():
-        options["sslmode"] = "require"
-    connection = psycopg.connect(Config.DATABASE_URL, **options)
+    parsed = urllib.parse.urlsplit(Config.DATABASE_URL)
+    query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
+    query.setdefault("sslmode", "require")
+    if "hostaddr" not in query and parsed.hostname:
+        try:
+            addresses = socket.getaddrinfo(parsed.hostname, parsed.port or 5432, socket.AF_INET, socket.SOCK_STREAM)
+        except OSError:
+            addresses = []
+        if addresses:
+            query["hostaddr"] = addresses[0][4][0]
+    target = urllib.parse.urlunsplit((
+        parsed.scheme, parsed.netloc, parsed.path, urllib.parse.urlencode(query), parsed.fragment
+    ))
+    connection = psycopg.connect(target)
     return CompatConnection(connection)
 
 
