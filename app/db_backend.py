@@ -158,10 +158,10 @@ class CompatConnection:
         return self._connection.closed
 
     def execute(self, sql: str, params: Iterable[Any] = ()) -> CompatCursor:
-        return CompatCursor(self._connection).execute(sql, params)
+        return CompatCursor(self._connection.cursor()).execute(sql, params)
 
     def executemany(self, sql: str, params: Iterable[Iterable[Any]]) -> CompatCursor:
-        return CompatCursor(self._connection).executemany(sql, params)
+        return CompatCursor(self._connection.cursor()).executemany(sql, params)
 
     def executescript(self, sql: str) -> None:
         self._connection.execute(adapt_sql(sql, ddl=True))
