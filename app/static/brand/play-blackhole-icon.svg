@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ícono OTRAVERSO PLAY: agujero negro con disco de acreción">
+  <defs>
+    <linearGradient id="pbi-orbit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#54e8ff"/>
+      <stop offset=".52" stop-color="#9d8bff"/>
+      <stop offset="1" stop-color="#e9d5ff"/>
+    </linearGradient>
+    <linearGradient id="pbi-disk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#54e8ff" stop-opacity="0"/>
+      <stop offset=".28" stop-color="#54e8ff"/>
+      <stop offset=".5" stop-color="#ffffff"/>
+      <stop offset=".72" stop-color="#f472b6"/>
+      <stop offset="1" stop-color="#fbbf24" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pbi-core" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#000000"/>
+      <stop offset=".76" stop-color="#01000a"/>
+      <stop offset="1" stop-color="#05030f"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="#05040f"/>
+  <g fill="none" stroke="url(#pbi-orbit)" stroke-width="1.2" opacity=".7">
+    <ellipse cx="32" cy="32" rx="27" ry="10" transform="rotate(-24 32 32)"/>
+    <ellipse cx="32" cy="32" rx="27" ry="10" transform="rotate(24 32 32)"/>
+  </g>
+  <g transform="translate(32 32) rotate(-18)" fill="none" stroke="url(#pbi-disk)" stroke-linecap="round">
+    <ellipse rx="23" ry="7" stroke-width="4" opacity=".55"/>
+    <ellipse rx="18" ry="5.5" stroke-width="2.6" opacity=".85"/>
+  </g>
+  <circle cx="32" cy="32" r="12" fill="none" stroke="url(#pbi-orbit)" stroke-width="2.2"/>
+  <circle cx="32" cy="32" r="11" fill="url(#pbi-core)"/>
+  <g fill="#54e8ff">
+    <circle cx="52" cy="18" r="1.6"/>
+    <circle cx="12" cy="44" r="1.2"/>
+  </g>
+</svg>

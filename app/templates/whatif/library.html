@@ -1,0 +1,18 @@
+<input type="hidden" name="csrf" value="$CSRF" data-wi-csrf hidden>
+<section class="wi-section wi-container">
+  <a class="wi-back" href="/what-if">← VOLVER A WHAT IF</a>
+  <div class="wi-section__head wi-section__head--row">
+    <div>
+      <p class="wi-eyebrow">BIBLIOTECA PERSONAL</p>
+      <h1>Mis mundos</h1>
+      <p>Guardado automático en el servidor. Los invitados conservan su identificador en este navegador; las cuentas registradas recuperan sus mundos desde cualquier sesión.</p>
+    </div>
+    <a class="wi-btn wi-btn--primary" href="/what-if/crear">NUEVA REALIDAD</a>
+  </div>
+  <div class="wi-filters">
+    <label>Buscar<input type="search" data-wi-search placeholder="Buscar por nombre o premisa"></label>
+    <label>Estado<select data-wi-filter><option value="active">Activas</option><option value="archived">Archivadas</option></select></label>
+  </div>
+  <div class="wi-card-grid" data-wi-library></div>
+  <div class="wi-status" data-wi-status role="status" aria-live="polite"></div>
+</section>

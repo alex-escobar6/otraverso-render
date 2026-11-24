@@ -3,19 +3,22 @@ from __future__ import annotations
 
 import re
 import urllib.parse
+import uuid
 from dataclasses import dataclass, field
 from email.parser import BytesParser
 from email.policy import default as email_policy
 from typing import Any, Callable
 
+from app.config import Config
 from app.core.render import esc
 
 
 class HTTPError(Exception):
-    def __init__(self, status: int, message: str):
+    def __init__(self, status: int, message: str, code: str = ""):
         super().__init__(message)
         self.status = status
         self.message = message
+        self.code = code
 
 
 @dataclass
@@ -40,6 +43,8 @@ class Request:
     session: Any = None
     permission_codes: set[str] = field(default_factory=set)
     csrf_token: str = ""
+    renew_session: bool = False
+    request_id: str = ""
 
     @classmethod
     def from_environ(cls, environ: dict[str, Any]) -> "Request":
@@ -62,8 +67,9 @@ class Request:
             if "=" in chunk:
                 key, value = chunk.strip().split("=", 1)
                 cookies[key] = value
+        request_id = headers.get("x-request-id", "").strip()[:64] or uuid.uuid4().hex[:16]
         req = cls(environ=environ, method=method, path=path, query=query,
-                  headers=headers, cookies=cookies)
+                  headers=headers, cookies=cookies, request_id=request_id)
         if method in {"POST", "PUT", "PATCH"}:
             req._parse_body()
         return req
@@ -113,7 +119,13 @@ class Request:
 
     @property
     def ip(self) -> str:
-        return (self.environ.get("HTTP_X_FORWARDED_FOR") or self.environ.get("REMOTE_ADDR") or "").split(",")[0].strip()
+        forwarded = self.environ.get("HTTP_X_FORWARDED_FOR", "") if Config.TRUST_PROXY else ""
+        return (forwarded or self.environ.get("REMOTE_ADDR") or "").split(",")[0].strip()[:64]
+
+    @property
+    def scheme(self) -> str:
+        forwarded = self.headers.get("x-forwarded-proto", "") if Config.TRUST_PROXY else ""
+        return (forwarded.split(",")[0].strip() or self.environ.get("wsgi.url_scheme", "http")).lower()
 
     @property
     def user_agent(self) -> str:
@@ -152,7 +164,7 @@ STATUS = {
     200: "OK", 201: "Created", 204: "No Content", 303: "See Other",
     400: "Bad Request", 401: "Unauthorized", 403: "Forbidden", 404: "Not Found",
     405: "Method Not Allowed", 413: "Payload Too Large", 429: "Too Many Requests",
-    500: "Internal Server Error",
+    500: "Internal Server Error", 502: "Bad Gateway", 503: "Service Unavailable",
 }
 
 

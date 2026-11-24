@@ -1,0 +1,12 @@
+.play-game--pulse-cosmic {
+  background: radial-gradient(circle at center, #11193f 0%, #040510 70%);
+}
+.play-game--pulse-cosmic [data-game-canvas] {
+  background: #040510;
+}
+.play-game--pulse-cosmic [data-game-start],
+.play-game--pulse-cosmic [data-game-result],
+.play-game--pulse-cosmic [data-game-paused] {
+  background: rgba(4, 5, 16, 0.76);
+  color: #eaf6ff;
+}

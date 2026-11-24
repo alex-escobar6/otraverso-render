@@ -10,13 +10,35 @@ from datetime import datetime, timedelta, timezone
 from app.config import Config
 from app.core.http import HTTPError, Request
 from app.db import execute, one, query
-from app.security import generate_token, hash_token, verify_password
+from app.security import generate_token, hash_token, safe_equal, verify_password
 
 SESSION_COOKIE = "otraverso_session"
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _utc(value: str) -> datetime:
+    return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+
+
+def _renew_session(request: Request, row) -> dict:
+    now = datetime.now(timezone.utc)
+    expires_at = _utc(row["expires_at"])
+    remaining = (expires_at - now).total_seconds()
+    if remaining <= 0 or remaining >= Config.SESSION_HOURS * 1800:
+        return dict(row)
+    cap = _utc(row["session_created_at"]) + timedelta(days=7)
+    renewed = min(now + timedelta(hours=Config.SESSION_HOURS), cap)
+    if renewed <= expires_at:
+        return dict(row)
+    value = renewed.strftime("%Y-%m-%d %H:%M:%S")
+    execute("UPDATE sessions SET expires_at=? WHERE id=?", (value, row["session_id"]))
+    request.renew_session = True
+    updated = dict(row)
+    updated["expires_at"] = value
+    return updated
 
 
 def load_session(request: Request) -> None:
@@ -33,6 +55,7 @@ def load_session(request: Request) -> None:
     )
     if not row or not row["active"]:
         return
+    row = _renew_session(request, row)
     request.session = row
     request.user = row
     request.csrf_token = row["csrf_token"]
@@ -82,11 +105,17 @@ def require_user(request: Request) -> None:
 def check_csrf(request: Request) -> None:
     sent = request.param("csrf", "")
     if request.user and request.session:
-        valid = bool(sent) and hmac.compare_digest(sent, request.session["csrf_token"])
-    else:
-        valid = verify_public_csrf(sent)
-    if not valid:
-        raise HTTPError(400, "Token de seguridad inválido o expirado")
+        if not sent or not safe_equal(sent, request.session["csrf_token"]):
+            raise HTTPError(400, "Token de seguridad inválido o expirado", "csrf_invalid")
+        return
+    status = public_csrf_status(sent)
+    if status == "valid":
+        return
+    if status == "expired":
+        raise HTTPError(400, "El token de seguridad expiró. Vuelve a cargar la página para continuar.", "csrf_expired")
+    if sent and "." not in sent and len(sent) >= 32:
+        raise HTTPError(401, "Tu sesión expiró. Guardamos lo que estabas escribiendo; inicia sesión para recuperarlo.", "session_expired")
+    raise HTTPError(400, "Token de seguridad inválido o expirado", "csrf_invalid")
 
 
 def public_csrf_token() -> str:
@@ -97,15 +126,40 @@ def public_csrf_token() -> str:
     return f"{payload}.{signature}"
 
 
-def verify_public_csrf(token: str) -> bool:
+def _public_csrf_signature(token: str) -> tuple[str, str, str]:
+    expires_s, nonce, signature = token.split(".")
+    return expires_s, nonce, signature
+
+
+def _public_csrf_valid_signature(expires_s: str, nonce: str, signature: str) -> bool:
+    payload = f"{expires_s}.{nonce}"
+    expected = hmac.new(Config.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()[:24]
+    return hmac.compare_digest(signature, expected) and len(nonce) >= 16
+
+
+def public_csrf_status(token: str) -> str:
     try:
-        expires_s, nonce, signature = token.split(".")
+        expires_s, nonce, signature = _public_csrf_signature(token)
         expires = int(expires_s)
         now = int(time.time())
+        if not _public_csrf_valid_signature(expires_s, nonce, signature):
+            return "invalid"
         if expires < now or expires > now + 7200:
-            return False
-        payload = f"{expires_s}.{nonce}"
-        expected = hmac.new(Config.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()[:24]
-        return hmac.compare_digest(signature, expected) and len(nonce) >= 16
+            return "expired"
+        return "valid"
     except (ValueError, AttributeError):
-        return False
+        return "invalid"
+
+
+def public_csrf_expires_at(token: str) -> int:
+    try:
+        expires_s, nonce, signature = _public_csrf_signature(token)
+        if not _public_csrf_valid_signature(expires_s, nonce, signature):
+            return 0
+        return int(expires_s)
+    except (ValueError, AttributeError):
+        return 0
+
+
+def verify_public_csrf(token: str) -> bool:
+    return public_csrf_status(token) == "valid"

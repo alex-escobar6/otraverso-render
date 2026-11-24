@@ -1,0 +1,44 @@
+<div class="universe-ui universe-game-ui play-game--gravity">
+  <a class="universe-play-return" href="/play" data-warp data-play-back>← REGRESAR A PLAY</a>
+  <div class="gravity-viewport" data-gravity-viewport></div>
+  <div class="universe-game-panel gravity-panel" aria-live="off">
+    <div class="universe-hud-row">
+      <div class="universe-hud-item"><span>Nivel</span><strong data-gravity-level>1 / 3</strong></div>
+      <div class="universe-hud-item"><span>Puntos</span><strong data-gravity-score>0</strong></div>
+      <div class="universe-hud-item"><span>Orbes</span><strong data-gravity-orbs>0 / 0</strong></div>
+      <div class="universe-hud-item"><span>Tiempo</span><strong data-gravity-time>0.0 s</strong></div>
+      <div class="universe-hud-item"><span>Caídas</span><strong data-gravity-falls>0</strong></div>
+      <div class="universe-hud-item"><span>Gravedad</span><strong data-gravity-gravity>NORMAL</strong></div>
+    </div>
+    <div class="universe-progress"><span data-gravity-progress></span></div>
+  </div>
+  <p class="gravity-hint" data-gravity-hint>WASD / flechas para moverte · Espacio para saltar · Q/E girar cámara · C centrar · P pausa · R reiniciar</p>
+  <div class="gravity-touch-controls" aria-label="Controles táctiles de GRAVITY">
+    <div class="gravity-stick" data-gravity-stick aria-label="Movimiento">
+      <span class="gravity-stick__knob" data-gravity-stick-knob></span>
+    </div>
+    <div class="gravity-touch-buttons">
+      <button class="universe-touch" type="button" data-gravity-jump aria-label="Saltar">SALTO</button>
+      <button class="universe-touch" type="button" data-gravity-recenter aria-label="Centrar cámara">CENTRAR</button>
+    </div>
+  </div>
+  <div class="universe-paused" data-game-paused hidden>
+    <div class="universe-result__card"><h2>PAUSA</h2><p>Pulsa P para continuar.</p></div>
+  </div>
+  <div class="universe-result" data-game-result hidden role="dialog" aria-modal="true" aria-labelledby="resultado-gravity-titulo">
+    <div class="universe-result__card">
+      <h2 id="resultado-gravity-titulo" data-result-title>SECTOR COMPLETADO</h2>
+      <div class="universe-result__stats">
+        <div><span>Puntos</span><strong data-result-score>0</strong></div>
+        <div><span>Tiempo</span><strong data-result-time>0.0 s</strong></div>
+        <div><span>Récord</span><strong data-result-best>—</strong></div>
+      </div>
+      <p class="gravity-result-detail" data-result-detail></p>
+      <div class="universe-result__actions">
+        <button class="universe-result-button" type="button" data-retry>REINTENTAR</button>
+        <button class="universe-result-button" type="button" data-circuit-menu>REGRESAR A PLAY</button>
+        <button class="universe-result-button" type="button" data-game-hub>NEXO</button>
+      </div>
+    </div>
+  </div>
+</div>

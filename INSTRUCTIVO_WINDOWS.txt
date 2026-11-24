@@ -1,0 +1,202 @@
+INSTRUCTIVO RAPIDO - OTRAVERSO EN WINDOWS
+==========================================
+
+Ruta del proyecto en Windows:
+
+C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO
+
+Este archivo puedes copiarlo junto con el proyecto.
+
+
+1) ABRIR POWERSHELL Y ENTRAR A LA CARPETA
+-----------------------------------------
+
+Ejecuta:
+
+cd "C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO"
+
+Verifica la ruta:
+
+Get-Location
+
+Debe mostrar:
+
+C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO
+
+
+2) VERIFICAR PYTHON
+-------------------
+
+Necesitas Python 3.11 o superior.
+
+py -3 --version
+
+Ejemplo de salida valida:
+
+Python 3.12.3
+
+Si "py" no funciona, prueba:
+
+python --version
+
+Si ninguno funciona, instala Python desde python.org y marca la opcion
+"Add python.exe to PATH" durante la instalacion. Luego cierra y vuelve
+a abrir PowerShell.
+
+
+3) CREAR ENTORNO VIRTUAL
+------------------------
+
+Dentro de la carpeta del proyecto:
+
+py -3 -m venv .venv
+
+Activa el entorno:
+
+.\.venv\Scripts\Activate.ps1
+
+Si sale un error de permisos o ejecucion, ejecuta primero:
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+Y vuelve a activar:
+
+.\.venv\Scripts\Activate.ps1
+
+Cuando este activado veras (.venv) al inicio de la linea.
+
+Instala Pillow, recomendado para imagenes:
+
+python -m pip install --upgrade pip
+python -m pip install Pillow
+
+
+4) PREPARAR EL ARCHIVO .env
+---------------------------
+
+Si NO existe .env, copialo desde el ejemplo:
+
+Copy-Item .env.example .env
+
+Si YA existe .env, no lo sobrescribas; solo editalo.
+
+Abre el archivo:
+
+notepad .env
+
+
+5) EDITAR .env
+--------------
+
+Ajusta especialmente DATABASE_PATH a la ruta de Windows:
+
+DATABASE_PATH=C:/USERS/Sistemas/Documents/ALex/Programacion/OTRAVERSO/data/otraverso.db
+SECRET_KEY=cambiar-por-una-clave-aleatoria-de-al-menos-48-caracteres
+BASE_URL=http://127.0.0.1:8000
+HOST=127.0.0.1
+PORT=8000
+DEBUG=0
+SESSION_HOURS=12
+ADMIN_EMAIL=admin@ejemplo.local
+ADMIN_PASSWORD=cambiar-contraseña-larga-y-única
+WHATSAPP_DEFAULT=573000000000
+MAX_UPLOAD_MB=8
+CURRENCY=COP
+
+Puedes generar una SECRET_KEY aleatoria con este comando:
+
+[Convert]::ToBase64String([byte[]](1..48 | ForEach-Object { Get-Random -Max 256 }))
+
+Copia el resultado y pegalo en SECRET_KEY=...
+
+IMPORTANTE: si copiaste el proyecto desde Linux, el .env puede traer la ruta
+/home/sistemas/otraverso/... . Cambiala por la ruta de Windows indicada arriba.
+
+Guarda el archivo y cierra el Bloc de notas.
+
+
+6) INICIALIZAR LA BASE DE DATOS
+-------------------------------
+
+python scripts\init_db.py
+
+Si no definiste ADMIN_EMAIL y ADMIN_PASSWORD, se creara un administrador
+temporal en:
+
+C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO\data\bootstrap_admin.txt
+
+Cambialo despues del primer ingreso.
+
+
+7) INICIAR EL SERVIDOR
+----------------------
+
+python scripts\serve.py
+
+Debe quedar ejecutandose en esa ventana. No la cierres mientras uses la app.
+
+
+8) ABRIR EN EL NAVEGADOR
+------------------------
+
+http://127.0.0.1:8000
+
+Secciones principales:
+
+Galaxia:       http://127.0.0.1:8000/
+Tienda:        http://127.0.0.1:8000/shop
+NEXUS RUSH:    http://127.0.0.1:8000/play
+WHAT IF:       http://127.0.0.1:8000/what-if
+Admin WHAT IF: http://127.0.0.1:8000/admin/what-if
+
+
+9) DETENER Y REINICIAR
+----------------------
+
+Para detener el servidor:
+
+Ctrl + C
+
+Para volver a iniciarlo:
+
+cd "C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO"
+.\.venv\Scripts\Activate.ps1
+python scripts\serve.py
+
+Si cambiaste codigo Python del servidor, reinicia serve.py.
+
+
+10) COMANDOS UTILES
+-------------------
+
+Con el entorno activado:
+
+python -m unittest discover -s tests -v
+python -m compileall -q app scripts tests
+python scripts\create_admin.py --email usuario@ejemplo.com
+python scripts\backup.py
+python scripts\restore.py otraverso_AAAAMMDD_HHMMSS_cli.db --confirm
+
+
+11) SI USAS CMD EN VEZ DE POWERSHELL
+------------------------------------
+
+cd /d "C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO"
+py -3 -m venv .venv
+.venv\Scripts\activate.bat
+python -m pip install Pillow
+copy .env.example .env
+notepad .env
+python scripts\init_db.py
+python scripts\serve.py
+
+
+12) SI VIENES DESDE LINUX
+-------------------------
+
+Si quieres conservar la base de datos, usuarios, imagenes y backups,
+copia tambien la carpeta:
+
+C:\USERS\Sistemas\Documents\ALex\Programacion\OTRAVERSO\data
+
+Si solo quieres empezar de cero, no copies data/ y ejecuta init_db.py.

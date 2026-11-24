@@ -1,4 +1,4 @@
-<section class="universe-stage" data-universe-root data-scene="$SCENE" data-circuit="$CIRCUIT" id="nexo-play" aria-label="Universo OTRAVERSO PLAY y NEXUS RUSH">
+<section class="universe-stage" data-universe-root data-scene="$SCENE" data-panel="$PANEL" data-circuit="$CIRCUIT" data-game-code="$GAME_CODE" data-game-registry="$GAME_REGISTRY" data-play-csrf="$PLAY_CSRF" id="nexo-play" aria-label="Universo OTRAVERSO PLAY">
   <div class="universe-scene universe-scene--play" aria-hidden="true">
     <svg class="universe-sky" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
       <defs>
@@ -20,15 +20,9 @@
         <circle cx="170" cy="110" r="1.4"/><circle cx="360" cy="210" r="1"/><circle cx="540" cy="80" r="1.6"/>
         <circle cx="880" cy="140" r="1.2"/><circle cx="1120" cy="90" r="1.5"/><circle cx="1390" cy="190" r="1"/>
       </g>
-      <g class="universe-archways">
-        <path d="M520 700V430a280 280 0 0 1 560 0v270"/>
-        <path d="M600 700V455a200 200 0 0 1 400 0v245"/>
-        <path d="M680 700V480a120 120 0 0 1 240 0v220"/>
-      </g>
       <path class="universe-horizon" d="M0 700 Q400 650 800 700 T1600 700 V900 H0Z"/>
     </svg>
     <div class="universe-grid"></div>
-    <div class="universe-core-beacon"><span></span><span></span></div>
   </div>
 
   <div class="universe-warp" data-warp-overlay aria-hidden="true"></div>
@@ -39,85 +33,14 @@
     <button type="button" data-error-retry>Reintentar</button>
   </div>
 
-  <div class="universe-ui universe-hub-ui">
-    <header class="universe-intro">
-      <p class="universe-eyebrow"><span></span> OTRAVERSO · NEXO DIMENSIONAL</p>
-      <h1>NO EXISTE UN SOLO UNIVERSO.<br><strong>EXPLORA LOS DEMÁS.</strong></h1>
-      <p class="universe-lead">Hay más de un mundo por descubrir</p>
-      <p class="universe-description">Un espacio donde descubrir, imaginar, jugar y experimentar.</p>
-      <div class="universe-actions">
-        <a class="universe-primary" href="/shop" data-warp>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
-      </div>
-    </header>
-    <nav class="universe-index" aria-label="Índice de universos">
-      <span class="universe-index__label">UNIVERSOS</span>
-      <a class="universe-index__item" href="/shop"><span class="universe-index__dot"></span><span>SHOP</span><small>DISPONIBLE</small></a>
-      <a class="universe-index__item" href="/play"><span class="universe-index__dot"></span><span>PLAY</span><small>DISPONIBLE</small></a>
-    </nav>
-  </div>
-
   <div class="universe-ui universe-play-ui">
-    <header class="universe-play-panel">
-      <p class="universe-eyebrow"><span></span> OTRAVERSO PLAY</p>
-      <h1>NEXUS<em>RUSH</em></h1>
-      <p>Tres circuitos. Una nave. Acelera, esquiva, recoge energía y cruza la meta antes de que se agote el tiempo.</p>
-      <p class="universe-play-best" data-play-best>Récords: —</p>
-      <div class="universe-actions">
-        <a class="universe-primary" href="/" data-warp>VOLVER AL NEXO <i aria-hidden="true">↗</i></a>
-      </div>
-    </header>
-    <div class="universe-circuit-bar" role="group" aria-label="Seleccionar circuito">
-      <button class="universe-circuit-button" type="button" data-start-circuit data-circuit="0" style="--circuit-color:#67e8f9">NEXUS I <small>Arranque · 95s</small></button>
-      <button class="universe-circuit-button" type="button" data-start-circuit data-circuit="1" style="--circuit-color:#f472b6">NEXUS II <small>Vértice · 88s</small></button>
-      <button class="universe-circuit-button" type="button" data-start-circuit data-circuit="2" style="--circuit-color:#a78bfa">NEXUS III <small>Colapso · 82s</small></button>
-    </div>
+    $HUB_UI
+    <nav class="universe-game-index universe-game-index--hub" aria-label="Catálogo de juegos PLAY">$GAME_INDEX</nav>
   </div>
 
-  <div class="universe-ui universe-game-ui">
-    <canvas class="universe-game-canvas" data-game-canvas aria-hidden="true"></canvas>
-    <div class="universe-game-panel" aria-live="off">
-      <div class="universe-hud-row">
-        <div class="universe-hud-item"><span>Velocidad</span><strong data-hud-speed>0 km/h</strong></div>
-        <div class="universe-hud-item"><span>Tiempo</span><strong data-hud-time>95.0 / 95s</strong></div>
-        <div class="universe-hud-item"><span>Puntos</span><strong data-hud-score>0</strong></div>
-        <div class="universe-hud-item">
-          <span>Turbo</span><div class="universe-meter"><span data-hud-turbo style="width:100%"></span></div>
-          <span>Energía</span><div class="universe-meter universe-meter--energy"><span data-hud-energy style="width:100%"></span></div>
-        </div>
-      </div>
-      <div class="universe-progress"><span data-hud-progress></span></div>
-    </div>
-    <p class="universe-game-label">Flechas / WASD · Espacio turbo · Shift salto · P pausa · R reiniciar · Esc salir</p>
-    <div class="universe-countdown" data-game-countdown>3</div>
-    <div class="universe-touch-controls" aria-label="Controles táctiles">
-      <div class="universe-touch-group">
-        <button class="universe-touch" type="button" data-touch-left aria-label="Girar a la izquierda">◀</button>
-        <button class="universe-touch" type="button" data-touch-right aria-label="Girar a la derecha">▶</button>
-      </div>
-      <div class="universe-touch-group">
-        <button class="universe-touch" type="button" data-touch-jump aria-label="Saltar">SALTO</button>
-        <button class="universe-touch universe-touch--boost" type="button" data-touch-boost aria-label="Turbo">TURBO</button>
-      </div>
-    </div>
-    <div class="universe-paused" data-game-paused hidden>
-      <div class="universe-result__card"><h2>PAUSA</h2><p>Pulsa P para continuar.</p></div>
-    </div>
-    <div class="universe-result" data-game-result hidden role="dialog" aria-modal="true" aria-labelledby="resultado-titulo">
-      <div class="universe-result__card">
-        <h2 id="resultado-titulo" data-result-title>CIRCUITO COMPLETADO</h2>
-        <div class="universe-result__stats">
-          <div><span>Puntos</span><strong data-result-score>0</strong></div>
-          <div><span>Tiempo</span><strong data-result-time>0.0 s</strong></div>
-          <div><span>Récord</span><strong data-result-best>—</strong></div>
-        </div>
-        <div class="universe-result__actions">
-          <button class="universe-result-button" type="button" data-retry>REINTENTAR</button>
-          <button class="universe-result-button" type="button" data-circuit-menu>CIRCUITOS</button>
-          <button class="universe-result-button" type="button" data-game-hub>NEXO</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  $PROFILE_UI
+
+  $GAME_UI
 
   <div class="universe-toast" data-universe-toast role="status" aria-live="polite"></div>
 </section>
@@ -126,7 +49,7 @@
   <section class="section">
     <div class="container pages-content">
       <h2>OTRAVERSO PLAY</h2>
-      <p>NEXUS RUSH requiere JavaScript. Vuelve al <a href="/">nexo dimensional</a> o entra a <a href="/shop">SHOP</a>.</p>
+      <p>OTRAVERSO PLAY requiere JavaScript. Vuelve al <a href="/">nexo dimensional</a>, entra a <a href="/shop">SHOP</a> o abre el <a href="/play/gravity">portal GRAVITY</a>.</p>
     </div>
   </section>
 </noscript>

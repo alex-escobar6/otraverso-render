@@ -23,7 +23,7 @@
 
 ## Autorización
 
-Roles sembrados: `superadmin`, `admin`, `product_manager`, `order_manager`. Permisos granulares por dominio, por ejemplo `products.edit`, `inventory.move`, `orders.edit`, `whatsapp.manage`, `settings.edit`, `users.manage`, `backup.manage`.
+Roles sembrados: `superadmin`, `admin`, `product_manager`, `order_manager`. Permisos granulares por dominio, por ejemplo `products.edit`, `inventory.move`, `orders.edit`, `whatsapp.manage`, `settings.edit`, `whatif.view`, `whatif.edit`, `users.manage`, `backup.manage`.
 
 Una cuenta sin permiso recibe `403` y el intento no ejecuta la escritura.
 
@@ -56,9 +56,18 @@ Todas las respuestas incluyen:
 - Las copias se guardan en `data/backups/` y su descarga exige sesión y permiso.
 - La restauración por CLI valida la ruta, `integrity_check` y crea un respaldo previo.
 
+## WHAT IF
+
+- Invitados: identificador aleatorio firmado con HMAC de `SECRET_KEY`, guardado en `localStorage`; no contiene correo ni dato personal.
+- Usuarios registrados: propiedad por `user_id`, con las mismas reglas de aislamiento que los invitados.
+- APIs y assets filtran por `owner_type` y `owner_key`; una realidad ajena devuelve `404`.
+- Moderación de entradas, longitud máxima, cuota por hora y lista de acciones permitidas para intervenciones.
+- `WHATIF_API_KEY` y `WHATIF_IMAGE_API_KEY` solo se leen del entorno; no se guardan en BD ni llegan al navegador.
+- Proveedores externos reciben el texto narrativo necesario; no reciben sesiones, correos ni claves.
+
 ## Limitaciones conocidas
 
-- No hay límite de tasa por IP en esta versión; debe aplicarse en el proxy inverso si el sitio queda público.
+- No hay límite de tasa global por IP en esta versión; WHAT IF limita solicitudes por propietario, pero el resto del sitio debe protegerse en el proxy inverso si queda público.
 - No hay verificación de correo ni recuperación de contraseña.
 - No hay pago en línea; WhatsApp es el canal de confirmación.
 - La política de datos y condiciones se configura en `/admin/settings/commercial` y debe revisarse jurídicamente antes de producción.

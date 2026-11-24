@@ -7,6 +7,7 @@ from pathlib import Path
 from string import Template
 
 from app.config import TEMPLATE_DIR
+from app.core.pages import page_for_path, public_pages
 from app.db import get_setting, modules_enabled, settings_group
 
 
@@ -66,8 +67,16 @@ def render_page(
     whatsapp_link = f"https://wa.me/{whatsapp}" if whatsapp else "#"
     nav = _public_nav(enabled, active, request)
     footer = _public_footer(commercial, visual, enabled)
-    logo_url = visual.get("logo", "").strip()
-    logo_html = f'<img class="brand-image" src="{esc(logo_url)}" alt="OTRAVERSO">' if logo_url else ""
+    page = page_for_path(getattr(request, "path", "")) if request is not None else None
+    banner = ""
+    if (page and page["status"] == "coming_soon"
+            and not (getattr(request, "user", None)
+                     and "pages.manage" in getattr(request, "permission_codes", set()))):
+        banner = (
+            '<div class="page-status-banner" role="status"><strong>PRÓXIMAMENTE</strong>'
+            f'<span>{esc(page["coming_soon_message"] or "Esta página aún no está disponible.")}</span></div>'
+        )
+    logo_url = visual.get("logo", "").strip() or "/static/brand/otraverso-logo.svg"
     favicon_url = visual.get("favicon", "").strip() or "/static/favicon.svg"
     return render("base.html",
         TITLE=esc(seo.get("title") or title or "OTRAVERSO"),
@@ -78,11 +87,11 @@ def render_page(
         OG_IMAGE=esc(seo.get("og_image", "")),
         FAVICON=esc(favicon_url),
         SITE_NAME=esc(commercial.get("business_name", "OTRAVERSO")),
-        LOGO=logo_html,
+        LOGO_SRC=esc(logo_url),
         BODY_CLASS=esc(body_class),
         NAV_HTML=nav,
         FOOTER_HTML=footer,
-        CONTENT=content,
+        CONTENT=banner + content,
         PRIMARY_COLOR=esc(visual.get("primary_color", "#6d5cff")),
         SECONDARY_COLOR=esc(visual.get("secondary_color", "#19d3c5")),
         ACCENT_COLOR=esc(visual.get("accent_color", "#ffb347")),
@@ -97,16 +106,30 @@ def render_page(
 
 
 def _public_nav(enabled: set[str], active: str, request: object) -> str:
-    links = [("portal", "/", "Inicio"), ("shop", "/shop", "Tienda")]
+    rows = {row["code"]: row for row in public_pages()}
     parts = []
-    for code, href, label in links:
-        if code not in enabled:
-            continue
+
+    def link(code: str, label: str, href: str, *, always: bool = False,
+             disabled_placeholder: bool = False) -> None:
+        row = rows.get(code)
+        if not row or row["nav_visible"] != 1 or row["status"] == "hidden":
+            return
+        if not always and code not in enabled:
+            if disabled_placeholder:
+                parts.append(f'<span class="nav-link nav-soon" title="Universo planeado">{label}</span>')
+            return
         css = "nav-link active" if active == code else "nav-link"
-        parts.append(f'<a class="{css}" href="{href}">{label}</a>')
-    parts.append('<a class="nav-link" href="/play">PLAY</a>')
-    for label in ("WHAT IF", "LABS"):
-        parts.append(f'<span class="nav-link nav-soon" title="Universo planeado">{label}</span>')
+        status = " · PRONTO" if row["status"] == "coming_soon" else ""
+        parts.append(
+            f'<a class="{css}" href="{href}" data-page-code="{esc(code)}" '
+            f'data-page-status="{esc(row["status"])}">{label}{status}</a>'
+        )
+
+    link("portal", "Inicio", "/")
+    link("shop", "Tienda", "/shop")
+    link("play", "PLAY", "/play", always=True)
+    link("whatif", "WHAT IF", "/what-if", disabled_placeholder=True)
+    parts.append('<span class="nav-link nav-soon" title="Universo planeado">LABS</span>')
     if request is not None and getattr(request, "user", None):
         parts.append('<a class="nav-link nav-admin" href="/admin">Panel</a>')
     else:

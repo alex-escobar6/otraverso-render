@@ -1,0 +1,13 @@
+#star-hunter-root,
+.play-game--star-hunter {
+  background: radial-gradient(circle at 50% 20%, #141b3a 0%, #050816 70%);
+}
+.play-game--star-hunter [data-game-canvas] {
+  background: #050816;
+}
+.play-game--star-hunter [data-game-start],
+.play-game--star-hunter [data-game-result],
+.play-game--star-hunter [data-game-paused] {
+  background: rgba(5, 8, 22, 0.72);
+  color: #e8eeff;
+}

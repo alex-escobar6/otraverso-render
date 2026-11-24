@@ -1,4 +1,4 @@
-"""Capa de datos SQLite (WAL, FK activadas, migraciones versionadas y semilla segura)."""
+"""Capa de datos SQLite/PostgreSQL con migraciones versionadas y semilla segura."""
 from __future__ import annotations
 
 import json
@@ -9,10 +9,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
+from app import db_backend
 from app.config import DATA_DIR, Config
 from app.security import hash_password
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 6
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS roles (
@@ -77,6 +78,23 @@ CREATE TABLE IF NOT EXISTS modules (
   coming_soon INTEGER NOT NULL DEFAULT 0 CHECK (coming_soon IN (0,1)),
   sort_order INTEGER NOT NULL DEFAULT 0,
   description TEXT DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS site_pages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  route TEXT NOT NULL UNIQUE,
+  universe TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','coming_soon','hidden')),
+  icon TEXT NOT NULL DEFAULT '',
+  image TEXT NOT NULL DEFAULT '',
+  coming_soon_message TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  nav_visible INTEGER NOT NULL DEFAULT 1 CHECK (nav_visible IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS suppliers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -347,6 +365,243 @@ CREATE TABLE IF NOT EXISTS backups (
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS play_profiles (
+  player_id TEXT PRIMARY KEY,
+  xp REAL NOT NULL DEFAULT 0 CHECK (xp >= 0),
+  level INTEGER NOT NULL DEFAULT 1 CHECK (level >= 1),
+  wins INTEGER NOT NULL DEFAULT 0 CHECK (wins >= 0),
+  total_score INTEGER NOT NULL DEFAULT 0 CHECK (total_score >= 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS play_results (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id TEXT NOT NULL REFERENCES play_profiles(player_id) ON DELETE CASCADE,
+  game TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0 CHECK (score >= 0),
+  duration_ms INTEGER NOT NULL DEFAULT 0 CHECK (duration_ms >= 0),
+  success INTEGER NOT NULL DEFAULT 0 CHECK (success IN (0,1)),
+  stats TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS play_achievements (
+  player_id TEXT NOT NULL REFERENCES play_profiles(player_id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_id, code)
+);
+CREATE TABLE IF NOT EXISTS play_collectibles (
+  player_id TEXT NOT NULL REFERENCES play_profiles(player_id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (player_id, code)
+);
+CREATE TABLE IF NOT EXISTS whatif_realities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_type TEXT NOT NULL CHECK (owner_type IN ('guest','user')),
+  owner_key TEXT NOT NULL,
+  code TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  premise TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  genre TEXT NOT NULL DEFAULT 'personalizado',
+  style TEXT NOT NULL DEFAULT 'cinematografico',
+  depth TEXT NOT NULL DEFAULT 'historia',
+  format TEXT NOT NULL DEFAULT 'automatico',
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived','trash')),
+  favorite INTEGER NOT NULL DEFAULT 0 CHECK (favorite IN (0,1)),
+  cover_asset_id INTEGER,
+  current_timeline_id INTEGER,
+  narrative_config TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_memory_cards (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  kind TEXT NOT NULL DEFAULT 'event',
+  subject TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  importance INTEGER NOT NULL DEFAULT 5 CHECK (importance BETWEEN 1 AND 10),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  kind TEXT NOT NULL DEFAULT 'established' CHECK (kind IN ('established','hypothesis','proposal','discarded')),
+  text TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'user',
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_timelines (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  parent_id INTEGER REFERENCES whatif_timelines(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  divergence_event TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_chapters (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER NOT NULL REFERENCES whatif_timelines(id) ON DELETE CASCADE,
+  number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  narrative_date TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('draft','published','superseded')),
+  provider TEXT NOT NULL DEFAULT 'local',
+  model TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (timeline_id, number)
+);
+CREATE TABLE IF NOT EXISTS whatif_chapter_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chapter_id INTEGER NOT NULL REFERENCES whatif_chapters(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  provider TEXT NOT NULL DEFAULT 'local',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_characters (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  name TEXT NOT NULL,
+  identity TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  personality TEXT NOT NULL DEFAULT '',
+  motivations TEXT NOT NULL DEFAULT '',
+  history TEXT NOT NULL DEFAULT '',
+  knowledge TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'activo',
+  appearance TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_character_relationships (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  character_a INTEGER NOT NULL REFERENCES whatif_characters(id) ON DELETE CASCADE,
+  character_b INTEGER NOT NULL REFERENCES whatif_characters(id) ON DELETE CASCADE,
+  relation TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'activa',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_locations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  parent_id INTEGER REFERENCES whatif_locations(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'lugar',
+  description TEXT NOT NULL DEFAULT '',
+  features TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'activo',
+  image_asset_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER NOT NULL REFERENCES whatif_timelines(id) ON DELETE CASCADE,
+  chapter_id INTEGER REFERENCES whatif_chapters(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  narrative_date TEXT NOT NULL DEFAULT '',
+  consequences TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','believed','unknown','proposed','discarded')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_memories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  kind TEXT NOT NULL CHECK (kind IN ('global','historical','character','geographic','chapter','current')),
+  subject_id INTEGER NOT NULL DEFAULT 0,
+  content TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'system',
+  confidence TEXT NOT NULL DEFAULT 'confirmed' CHECK (confidence IN ('confirmed','belief','proposed','unknown')),
+  importance INTEGER NOT NULL DEFAULT 5 CHECK (importance BETWEEN 1 AND 10),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_interventions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER NOT NULL REFERENCES whatif_timelines(id) ON DELETE CASCADE,
+  user_text TEXT NOT NULL,
+  intent TEXT NOT NULL DEFAULT 'modificar',
+  proposal TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','applied','rejected','failed')),
+  result TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  applied_at TEXT
+);
+CREATE TABLE IF NOT EXISTS whatif_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  entity_type TEXT NOT NULL,
+  entity_id INTEGER NOT NULL DEFAULT 0,
+  action TEXT NOT NULL,
+  snapshot TEXT NOT NULL DEFAULT '{}',
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_assets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER NOT NULL REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  entity_type TEXT NOT NULL DEFAULT 'reality',
+  entity_id INTEGER NOT NULL DEFAULT 0,
+  kind TEXT NOT NULL DEFAULT 'cover',
+  prompt TEXT NOT NULL DEFAULT '',
+  provider TEXT NOT NULL DEFAULT 'schematic',
+  model TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'ready' CHECK (status IN ('ready','pending','error','disabled')),
+  mime TEXT NOT NULL DEFAULT 'image/svg+xml',
+  data BLOB,
+  url TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_generation_jobs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reality_id INTEGER REFERENCES whatif_realities(id) ON DELETE CASCADE,
+  timeline_id INTEGER,
+  kind TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','running','done','error','canceled')),
+  stage TEXT NOT NULL DEFAULT 'Preparando',
+  idempotency_key TEXT NOT NULL UNIQUE,
+  request TEXT NOT NULL DEFAULT '{}',
+  result TEXT NOT NULL DEFAULT '{}',
+  error TEXT NOT NULL DEFAULT '',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS whatif_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_type TEXT NOT NULL,
+  owner_key TEXT NOT NULL,
+  provider TEXT NOT NULL DEFAULT 'local',
+  kind TEXT NOT NULL,
+  tokens_in INTEGER NOT NULL DEFAULT 0,
+  tokens_out INTEGER NOT NULL DEFAULT 0,
+  success INTEGER NOT NULL DEFAULT 1 CHECK (success IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_modality ON products(modality);
@@ -354,6 +609,16 @@ CREATE INDEX IF NOT EXISTS idx_analytics_type_date ON analytics_events(event_typ
 CREATE INDEX IF NOT EXISTS idx_requests_date ON purchase_requests(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_inventory_product ON inventory_movements(product_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_play_results_player ON play_results(player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_play_results_game ON play_results(game, created_at);
+CREATE INDEX IF NOT EXISTS idx_whatif_owner ON whatif_realities(owner_type, owner_key, status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_whatif_timeline_reality ON whatif_timelines(reality_id, parent_id);
+CREATE INDEX IF NOT EXISTS idx_whatif_chapter_timeline ON whatif_chapters(timeline_id, number);
+CREATE INDEX IF NOT EXISTS idx_whatif_memory_context ON whatif_memories(reality_id, timeline_id, kind, importance);
+CREATE INDEX IF NOT EXISTS idx_whatif_memory_cards ON whatif_memory_cards(reality_id, timeline_id, kind, importance);
+CREATE INDEX IF NOT EXISTS idx_whatif_event_timeline ON whatif_events(reality_id, timeline_id, narrative_date);
+CREATE INDEX IF NOT EXISTS idx_whatif_job_status ON whatif_generation_jobs(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_whatif_usage_owner ON whatif_usage(owner_type, owner_key, created_at);
 """
 
 PERMISSIONS: dict[str, str] = {
@@ -376,7 +641,44 @@ PERMISSIONS: dict[str, str] = {
     "users.manage": "Gestionar usuarios, roles y permisos",
     "audit.view": "Ver bitácora de auditoría",
     "backup.manage": "Crear y descargar copias de seguridad",
+    "whatif.view": "Ver operación de OTRAVERSO WHAT IF",
+    "whatif.edit": "Configurar motores y contenido de WHAT IF",
+    "pages.manage": "Gestionar disponibilidad de páginas",
 }
+
+PAGE_REGISTRY: tuple[dict, ...] = (
+    {
+        "code": "portal", "name": "Inicio", "route": "/",
+        "description": "Portada general de OTRAVERSO y navegación del multiverso.",
+        "universe": "OTRAVERSO", "category": "Portada", "status": "available",
+        "icon": "", "image": "", "coming_soon_message": "", "sort_order": 0,
+        "nav_visible": 1, "prefixes": (),
+    },
+    {
+        "code": "shop", "name": "Tienda", "route": "/shop",
+        "description": "Catálogo, cobertura, productos y solicitudes de OTRAVERSO SHOP.",
+        "universe": "OTRAVERSO SHOP", "category": "Universo", "status": "available",
+        "icon": "", "image": "", "coming_soon_message": "La tienda estará disponible muy pronto.",
+        "sort_order": 1, "nav_visible": 1,
+        "prefixes": ("/shop", "/pages", "/buscar", "/sitemap.xml", "/robots.txt"),
+    },
+    {
+        "code": "whatif", "name": "WHAT IF", "route": "/what-if",
+        "description": "Realidades narrativas persistentes de OTRAVERSO WHAT IF.",
+        "universe": "OTRAVERSO WHAT IF", "category": "Universo", "status": "available",
+        "icon": "", "image": "", "coming_soon_message": "WHAT IF estará disponible próximamente. Puedes explorar la página, pero aún no se pueden crear realidades.",
+        "sort_order": 2, "nav_visible": 1,
+        "prefixes": ("/what-if", "/api/what-if/v1"),
+    },
+    {
+        "code": "play", "name": "PLAY", "route": "/play",
+        "description": "Juegos, exploración y progreso de OTRAVERSO PLAY.",
+        "universe": "OTRAVERSO PLAY", "category": "Universo", "status": "available",
+        "icon": "", "image": "", "coming_soon_message": "PLAY estará disponible próximamente. Puedes visitar la página, pero los juegos aún no están activos.",
+        "sort_order": 3, "nav_visible": 1,
+        "prefixes": ("/play", "/api/play/v1"),
+    },
+)
 
 ROLES: dict[str, set[str]] = {
     "superadmin": set(PERMISSIONS),
@@ -446,10 +748,54 @@ DEFAULT_SETTINGS: dict[str, dict[str, str]] = {
         "order_message": "Hola OTRAVERSO, quiero solicitar este producto bajo pedido:\n\nProducto: {product}\nPrecio: {price}\nModalidad: Bajo pedido\nTiempo estimado de importación: {delivery}\n\nEntiendo que no está en inventario y que la importación puede tardar. ¿Me brindan información para solicitarlo?",
         "contact_message": "Hola OTRAVERSO, quiero hablar con ustedes.",
     },
+    "whatif": {
+        "enabled": "1",
+        "text_provider": "local",
+        "text_model": "",
+        "text_api_url": "",
+        "image_provider": "schematic",
+        "image_model": "",
+        "image_api_url": "",
+        "timeout_seconds": "20",
+        "max_retries": "1",
+        "max_requests_hour": "40",
+        "max_chapter_chars": "36000",
+        "max_idea_chars": "1200",
+        "context_chapters": "6",
+        "moderation": "1",
+        "generate_images": "0",
+        "default_genre": "personalizado",
+        "narrative_instructions": "",
+        "ideas_enabled": "1",
+        "apocalypse_enabled": "1",
+        "crazy_enabled": "1",
+        "unlimited_enabled": "1",
+        "visual_primary_color": "#8f7dff",
+        "visual_secondary_color": "#35e7d2",
+        "visual_accent_color": "#ffd27a",
+        "visual_background_color": "#f7f5ff",
+        "visual_elements": "[]",
+        "narrative_templates": "{}",
+        "chapter_normal_words": "1800",
+        "chapter_extended_words": "3200",
+        "chapter_cinematic_words": "5000",
+        "max_chapter_words": "6000",
+        "generation_blocks": "3",
+        "surprise_frequency": "25",
+        "randomness_level": "2",
+        "available_genres": "ciencia-ficcion,historia-alternativa,fantasia,misterio,terror,aventura,distopia,comedia,supervivencia,horror-cosmico,realidades-alternativas,surrealista,personalizado",
+        "available_styles": "cinematografico,realista,epico,misterioso,oscuro,aventurero,documental,absurdo,surrealista,personalizado",
+        "memory_cards_limit": "40",
+        "default_point_of_view": "tercera persona",
+        "default_ending": "abierto",
+        "initial_characters": "3",
+    },
 }
 
 
-def connect() -> sqlite3.Connection:
+def connect():
+    if Config.DB_BACKEND == "postgres":
+        return db_backend.connect()
     conn = sqlite3.connect(Config.DB_PATH, timeout=20)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -461,7 +807,7 @@ def connect() -> sqlite3.Connection:
 def transaction():
     conn = connect()
     try:
-        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("BEGIN IMMEDIATE" if Config.DB_BACKEND == "sqlite" else "BEGIN")
         yield conn
         conn.commit()
     except Exception:
@@ -494,21 +840,29 @@ def execute(sql: str, params: Iterable[Any] = ()) -> sqlite3.Cursor:
 
 
 def init_db() -> None:
-    Config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with connect() as conn:
-        conn.execute("PRAGMA journal_mode = WAL")
-        conn.executescript(SCHEMA)
-        _migrate(conn)
-        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+    if Config.DB_BACKEND == "postgres":
+        with connect() as conn:
+            db_backend.init_schema(conn, SCHEMA, SCHEMA_VERSION)
+            _migrate(conn)
+    else:
+        Config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with connect() as conn:
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.executescript(SCHEMA)
+            _migrate(conn)
+            conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     _seed()
 
 
-def _migrate(conn: sqlite3.Connection) -> None:
-    columns = {row[1] for row in conn.execute("PRAGMA table_info(products)")}
+def _migrate(conn) -> None:
+    columns = db_backend.table_columns(conn, "products")
     if "seo_title" not in columns:
         conn.execute("ALTER TABLE products ADD COLUMN seo_title TEXT DEFAULT ''")
     if "seo_description" not in columns:
         conn.execute("ALTER TABLE products ADD COLUMN seo_description TEXT DEFAULT ''")
+    reality_columns = db_backend.table_columns(conn, "whatif_realities")
+    if "narrative_config" not in reality_columns:
+        conn.execute("ALTER TABLE whatif_realities ADD COLUMN narrative_config TEXT NOT NULL DEFAULT '{}'")
 
 
 def _seed() -> None:
@@ -532,14 +886,30 @@ def _seed() -> None:
         modules = [
             ("portal", "OTRAVERSO", 1, 0, 0, "Portada principal y navegación de universos."),
             ("shop", "OTRAVERSO SHOP", 1, 0, 1, "Tienda de productos con inventario y bajo pedido."),
-            ("whatif", "OTRAVERSO WHAT IF", 0, 1, 2, "Universo de inteligencia narrativa (planeado)."),
-            ("play", "OTRAVERSO PLAY", 0, 1, 3, "Universo de juegos (planeado)."),
+            ("whatif", "OTRAVERSO WHAT IF", 1, 0, 2, "Universo de realidades narrativas persistentes."),
+            ("play", "OTRAVERSO PLAY", 1, 0, 3, "Universo de juegos, exploración y progreso PLAY ID."),
             ("labs", "OTRAVERSO LABS", 0, 1, 4, "Experimentos y herramientas (planeado)."),
         ]
         conn.executemany(
             "INSERT OR IGNORE INTO modules(code,name,enabled,coming_soon,sort_order,description) VALUES (?,?,?,?,?,?)",
             modules,
         )
+        conn.execute(
+            "UPDATE modules SET enabled=1, coming_soon=0, "
+            "description='Universo de juegos, exploración y progreso PLAY ID.' WHERE code='play'"
+        )
+        conn.execute(
+            "UPDATE modules SET enabled=1, coming_soon=0, "
+            "description='Universo de realidades narrativas persistentes.' WHERE code='whatif'"
+        )
+        for page in PAGE_REGISTRY:
+            conn.execute(
+                "INSERT OR IGNORE INTO site_pages(code,name,description,route,universe,category,status,"
+                "icon,image,coming_soon_message,sort_order,nav_visible) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (page["code"], page["name"], page["description"], page["route"], page["universe"],
+                 page["category"], page["status"], page["icon"], page["image"],
+                 page["coming_soon_message"], page["sort_order"], page["nav_visible"]),
+            )
 
         for category, values in DEFAULT_SETTINGS.items():
             for key, value in values.items():

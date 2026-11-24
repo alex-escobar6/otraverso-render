@@ -1,0 +1,155 @@
+<section class="wi-section wi-container wi-create">
+  <a class="wi-back" href="/what-if">← VOLVER A WHAT IF</a>
+  <div class="wi-create__head">
+    <p class="wi-eyebrow">TALLER DE REALIDADES · PUERTA NUEVA</p>
+    <h1>¿Qué pasaría si…?</h1>
+    <p>Escribe solo la idea. Los demás ajustes son opcionales: el modo automático recomienda el formato según la premisa. Siempre podrás revisar la propuesta antes de abrir el mundo.</p>
+  </div>
+
+  <form class="wi-form" data-wi-create-form>
+    <input type="hidden" name="csrf" value="$CSRF">
+    <label for="wi-idea">Tu idea o pregunta</label>
+    <textarea id="wi-idea" name="idea" maxlength="1200" rows="4" required placeholder="¿Y si los dinosaurios nunca se hubieran extinguido?"></textarea>
+    <div class="wi-actions">
+      <button class="wi-btn wi-btn--signal wi-btn--small" type="button" data-wi-random-idea>SORPRÉNDEME</button>
+      <a class="wi-btn wi-btn--ghost wi-btn--small" href="/what-if/ideas">ABRIR GENERADOR DE IDEAS</a>
+    </div>
+    <div class="wi-idea-grid wi-idea-grid--compact">$IDEAS</div>
+
+    <details class="wi-advanced wi-basics" data-wi-basics>
+      <summary>CONFIGURACIÓN BÁSICA · OPCIONAL</summary>
+      <div>
+        <div class="wi-config-block">
+          <p class="wi-eyebrow">AJUSTES DEL MUNDO</p>
+          <div class="wi-config-grid">
+            <label class="wi-switch">
+              <span>Modo apocalipsis</span>
+              <input type="hidden" name="apocalypse" value="0">
+              <input type="checkbox" name="apocalypse" value="1">
+              <span class="wi-switch__track" aria-hidden="true"></span>
+            </label>
+            <label class="wi-switch wi-switch--danger">
+              <span>Modo loco</span>
+              <input type="hidden" name="crazy" value="0">
+              <input type="checkbox" name="crazy" value="1">
+              <span class="wi-switch__track" aria-hidden="true"></span>
+            </label>
+            <label class="wi-switch wi-switch--limitless">
+              <span>Modo Sin Límites</span>
+              <input type="hidden" name="unlimited" value="0">
+              <input type="checkbox" name="unlimited" value="1">
+              <span class="wi-switch__track" aria-hidden="true"></span>
+            </label>
+            <label>Intensidad apocalíptica
+              <select name="apocalypse_level" data-wi-options="apocalypse_levels">
+                <option value="gradual">Gradual</option>
+                <option value="acelerado" selected>Acelerado</option>
+                <option value="inevitable">Inevitable</option>
+                <option value="caos-absoluto">Caos absoluto</option>
+              </select>
+            </label>
+            <label>Intensidad de locura
+              <select name="crazy_level" data-wi-options="crazy_levels">
+                <option value="1" selected>Toque extraño</option>
+                <option value="2">Inquietante</option>
+                <option value="3">Absurdo</option>
+                <option value="4">Surrealismo total</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="wi-field-grid">
+          <label>Género<select name="genre">$GENRES</select></label>
+          <label>Estilo narrativo<select name="style">$STYLES</select></label>
+          <label>Profundidad<select name="depth">$DEPTHS</select></label>
+          <label>Formato<select name="format">$FORMATS</select></label>
+        </div>
+      </div>
+    </details>
+
+    <details class="wi-advanced">
+      <summary>CONFIGURACIÓN AVANZADA · AJUSTES DEL MOTOR</summary>
+      <div>
+        <div class="wi-config-grid">
+          <label>Longitud de capítulo
+            <select name="chapter_length" data-wi-options="chapter_lengths">
+              <option value="normal" selected>Normal</option>
+              <option value="extenso">Extenso</option>
+              <option value="cinematografico">Cinematográfico</option>
+            </select>
+          </label>
+          <label>Aleatoriedad
+            <select name="randomness" data-wi-options="randomness_levels">
+              <option value="1">Baja</option>
+              <option value="2" selected>Media</option>
+              <option value="3">Alta</option>
+              <option value="4">Extrema</option>
+            </select>
+          </label>
+          <label>Frecuencia de sorpresa
+            <select name="surprise_frequency" data-wi-options="surprise_frequency_levels">
+              <option value="0">Sin sorpresas</option>
+              <option value="25" selected>Ocasional</option>
+              <option value="50">Frecuente</option>
+              <option value="75">Alta</option>
+              <option value="100">Constante</option>
+            </select>
+          </label>
+          <label>Punto de vista
+            <select name="point_of_view" data-wi-options="perspectives">
+              <option value="tercera persona" selected>Tercera persona</option>
+              <option value="primera persona">Primera persona</option>
+              <option value="omnisciente">Narrador omnisciente</option>
+              <option value="testigo">Testigo de los hechos</option>
+              <option value="segunda persona">Segunda persona</option>
+            </select>
+          </label>
+          <label>Personajes iniciales<input name="initial_characters" maxlength="300" placeholder="Una detective, un ingeniero, una testigo"></label>
+          <label>Final previsto<input name="ending" maxlength="300" placeholder="Abierto, trágico, esperanzador…"></label>
+        </div>
+      </div>
+    </details>
+
+    <button class="wi-btn wi-btn--primary wi-btn--wide" type="submit">PREPARAR PROPUESTA DE MUNDO</button>
+  </form>
+
+  <div class="wi-status" data-wi-status role="status" aria-live="polite"></div>
+
+  <div class="wi-wizard" data-wi-proposal hidden>
+    <div class="wi-section__head">
+      <p class="wi-eyebrow">PROPUESTA INICIAL · ANTES DE ABRIR EL MUNDO</p>
+      <h2>Revisa y ajusta antes de crear</h2>
+      <p data-wi-provider></p>
+    </div>
+    <form data-wi-confirm-form>
+      <input type="hidden" name="csrf" value="$CSRF">
+      <label>Nombre<input name="title" data-wi-field="title" maxlength="140"></label>
+      <label>Premisa<textarea name="premise" data-wi-field="premise" rows="2" maxlength="900"></textarea></label>
+      <label>Descripción<textarea name="description" data-wi-field="description" rows="3" maxlength="2000"></textarea></label>
+      <label>Reglas iniciales (una por línea)<textarea name="rules_text" data-wi-field="rules" rows="4"></textarea></label>
+      <input type="hidden" name="genre" data-wi-field="genre">
+      <input type="hidden" name="style" data-wi-field="style">
+      <input type="hidden" name="depth" data-wi-field="depth">
+      <input type="hidden" name="format" data-wi-field="format">
+      <input type="hidden" name="first_scene" data-wi-field="first_scene">
+      <input type="hidden" name="recommendation" data-wi-field="recommendation">
+      <input type="hidden" name="apocalypse" value="0" data-wi-config="apocalypse">
+      <input type="hidden" name="apocalypse_level" value="0" data-wi-config="apocalypse_level">
+      <input type="hidden" name="crazy" value="0" data-wi-config="crazy">
+      <input type="hidden" name="crazy_level" value="0" data-wi-config="crazy_level">
+      <input type="hidden" name="unlimited" value="0" data-wi-config="unlimited">
+      <input type="hidden" name="chapter_length" value="" data-wi-config="chapter_length">
+      <input type="hidden" name="randomness" value="" data-wi-config="randomness">
+      <input type="hidden" name="surprise_frequency" value="" data-wi-config="surprise_frequency">
+      <input type="hidden" name="point_of_view" value="" data-wi-config="point_of_view">
+      <input type="hidden" name="initial_characters" value="" data-wi-config="initial_characters">
+      <input type="hidden" name="ending" value="" data-wi-config="ending">
+      <input type="hidden" name="narrative_config" value="" data-wi-config="narrative_config">
+      <div class="wi-actions">
+        <button class="wi-btn wi-btn--primary" type="submit">CONFIRMAR Y CREAR REALIDAD</button>
+        <button class="wi-btn wi-btn--ghost" type="button" data-wi-cancel>AJUSTAR IDEA</button>
+      </div>
+    </form>
+  </div>
+</section>

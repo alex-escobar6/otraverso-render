@@ -1,72 +1,23 @@
-"""Portada principal de OTRAVERSO y navegación conceptual de universos."""
+"""Portada principal de OTRAVERSO y navegación conceptual del multiverso."""
 from __future__ import annotations
+
+import json
 
 from app.core.http import Request, Response
 from app.core.render import esc, render, render_page
 from app.db import query, settings_group
+from app.services.multiverse import (
+    UNIVERSE_COPY,
+    UNIVERSE_META,
+    public_cards,
+    scene_config,
+)
 
-UNIVERSE_COPY = {
-    "portal": ("Universo central", "El acceso a una plataforma diseñada para crecer por módulos.", "#6d5cff"),
-    "shop": ("Comercio local y global", "Productos en inventario y bajo pedido, con información clara de plazos.", "#8b5cf6"),
-    "whatif": ("Inteligencia narrativa", "Historias extensas, escenarios y mundos alternativos. En planeación.", "#ffb347"),
-    "play": ("Juegos y entretenimiento", "Experiencias lúdicas propias. En planeación.", "#f472b6"),
-    "labs": ("Experimentos", "Herramientas y pruebas independientes. En planeación.", "#60a5fa"),
-}
-
-UNIVERSE_META = {
-    "shop": {
-        "order": "01",
-        "short": "SHOP",
-        "tagline": "Descubre cosas que no sabías que necesitabas",
-        "cta": "EXPLORAR SHOP",
-        "status": "ACTIVO",
-        "index_status": "Activo",
-        "color": "#8b5cf6",
-        "accent": "#54e8ff",
-        "x": "79%",
-        "y": "43%",
-        "detail": "Productos reales en inventario y bajo pedido, con entregas en Nariño y compras confirmadas por WhatsApp.",
-    },
-    "whatif": {
-        "order": "02",
-        "short": "WHAT IF",
-        "tagline": "Imagina lo imposible. Descubre qué pasaría si...",
-        "cta": "VER PRESENTACIÓN",
-        "status": "PRÓXIMAMENTE",
-        "index_status": "Planeado",
-        "color": "#ffb347",
-        "accent": "#ffd89b",
-        "x": "55%",
-        "y": "26%",
-        "detail": "Un universo de historias, inteligencia artificial y escenarios alternativos actualmente en diseño.",
-    },
-    "play": {
-        "order": "03",
-        "short": "PLAY",
-        "tagline": "El siguiente nivel comienza aquí",
-        "cta": "VER PRESENTACIÓN",
-        "status": "PRÓXIMAMENTE",
-        "index_status": "Planeado",
-        "color": "#f472b6",
-        "accent": "#7dd3fc",
-        "x": "73%",
-        "y": "66%",
-        "detail": "Un mundo de entretenimiento y videojuegos propios en etapa de conceptualización.",
-    },
-    "labs": {
-        "order": "04",
-        "short": "LABS",
-        "tagline": "Experimenta. Crea. Evoluciona",
-        "cta": "VER PRESENTACIÓN",
-        "status": "PRÓXIMAMENTE",
-        "index_status": "Planeado",
-        "color": "#60a5fa",
-        "accent": "#5eead4",
-        "x": "43%",
-        "y": "62%",
-        "detail": "Una dimensión de prototipos, herramientas y estructuras tecnológicas en desarrollo.",
-    },
-}
+UNIVERSE_COPY["portal"] = (
+    "Universo central",
+    "El acceso a una plataforma diseñada para crecer por módulos.",
+    "#54e8ff",
+)
 
 
 def register(router) -> None:
@@ -81,16 +32,13 @@ def _world_node(module, meta: dict) -> str:
     order = esc(meta["order"])
     color = esc(meta["color"])
     accent = esc(meta["accent"])
-    enabled = bool(module["enabled"])
-    href = "/shop" if code == "shop" else f"/{code}"
-    action = "data-warp" if enabled else f'data-dialog="{esc(code)}"'
-    tag = "a" if enabled else "button"
-    extra = f'href="{href}"' if enabled else 'type="button" aria-haspopup="dialog"'
-    target = f' title="Abrir {name}"' if enabled else ""
+    route = esc(meta.get("route") or f"/universos/{code}")
     return f"""
-    <{tag} class="world-node world-node--{esc(code)}" data-world="{esc(code)}" {action} {extra}
+    <button class="world-node world-node--{esc(code)}" type="button" data-world="{esc(code)}"
+      data-universe-focus="{esc(code)}" data-universe-route="{route}"
       style="--node-color:{color};--node-accent:{accent};--fallback-x:{meta['x']};--fallback-y:{meta['y']}"
-      aria-label="{name}: {tagline}"{target}>
+      aria-label="Explorar universo {name}: {tagline}">
+      <span class="world-node__field" aria-hidden="true"></span>
       <span class="world-node__orbit" aria-hidden="true"></span>
       <span class="world-node__core" aria-hidden="true"></span>
       <span class="world-node__info">
@@ -99,7 +47,7 @@ def _world_node(module, meta: dict) -> str:
         <span class="world-node__tagline">{tagline}</span>
         <span class="world-node__cta">{esc(meta['cta'])} <i aria-hidden="true">→</i></span>
       </span>
-    </{tag}>"""
+    </button>"""
 
 
 def _world_dialog(module, meta: dict) -> str:
@@ -125,13 +73,89 @@ def _index_item(module, meta: dict) -> str:
     code = module["code"]
     short = esc(meta["short"])
     enabled = bool(module["enabled"])
-    action = f'href="/shop" data-warp data-index="{esc(code)}"' if enabled and code == "shop" else (
-        f'href="/{code}" data-index="{esc(code)}"' if enabled else
-        f'type="button" data-dialog="{esc(code)}" data-index="{esc(code)}"'
-    )
-    tag = "a" if enabled else "button"
+    if enabled:
+        href = meta.get("route") or ("/shop" if code == "shop" else f"/{code}")
+        action = f'href="{esc(href)}" data-warp data-world="{esc(code)}" data-index="{esc(code)}"'
+        tag = "a"
+    else:
+        action = f'type="button" data-dialog="{esc(code)}" data-index="{esc(code)}"'
+        tag = "button"
     return f'<{tag} class="galaxy-index__item" {action} style="--dot:{esc(meta["color"])}">' \
            f'<span class="galaxy-index__dot"></span><span>{short}</span><small>{esc(meta["index_status"])}</small></{tag}>'
+
+
+def _planet_link(planet: dict, enabled: bool) -> str:
+    code = esc(planet["code"])
+    name = esc(planet["name"])
+    note = esc(planet["note"])
+    status = esc(planet["status"])
+    kind = esc(planet["type"])
+    if enabled and planet.get("route"):
+        return (
+            f'<a class="universe-planet" href="{esc(planet["route"])}" data-warp '
+            f'data-world-planet="{code}" data-world-route="{esc(planet["route"])}" title="{note}">'
+            f'<span class="universe-planet__dot" aria-hidden="true"></span>'
+            f'<span class="universe-planet__body"><strong>{name}</strong>'
+            f'<small>{kind} · {status}</small><span>{note}</span></span>'
+            f'<i aria-hidden="true">↗</i></a>'
+        )
+    return (
+        f'<span class="universe-planet is-pending" data-world-planet="{code}" title="{note}">'
+        f'<span class="universe-planet__dot" aria-hidden="true"></span>'
+        f'<span class="universe-planet__body"><strong>{name}</strong>'
+        f'<small>{kind} · {status}</small><span>{note}</span></span></span>'
+    )
+
+
+def _focus_panel(module, meta: dict) -> str:
+    code = module["code"]
+    planets = "".join(_planet_link(planet, bool(module["enabled"])) for planet in meta["planets"])
+    dossier = f"/universos/{code}"
+    return f"""
+    <div class="galaxy-focus" data-universe-panel="{esc(code)}" hidden role="region"
+         aria-label="Interior del universo {esc(meta['name'])}">
+      <div class="galaxy-focus__head">
+        <span class="galaxy-focus__eyebrow">UNIVERSO {esc(meta['order'])} · {esc(meta['status'])}</span>
+        <h2>{esc(meta['name'])}</h2>
+        <p>{esc(meta['ambient'])}</p>
+      </div>
+      <div class="galaxy-focus__planets">
+        <span class="galaxy-focus__label">MUNDOS Y EXPERIENCIAS</span>
+        {planets}
+      </div>
+      <button class="galaxy-focus__explore" type="button" data-explore-universe="{esc(code)}">EXPLORAR UNIVERSO <i aria-hidden="true">✦</i></button>
+      <div class="galaxy-focus__foot">
+        <a class="galaxy-focus__dossier" href="{dossier}">DOSSIER <i aria-hidden="true">↗</i></a>
+        <button class="galaxy-focus__back" type="button" data-universe-back>VOLVER AL MULTIVERSO <i aria-hidden="true">←</i></button>
+      </div>
+    </div>"""
+
+
+def _guide_card(module, meta: dict) -> str:
+    code = module["code"]
+    enabled = bool(module["enabled"])
+    route = meta.get("route") or f"/universos/{code}"
+    action = "data-warp" if enabled else f'data-dialog="{esc(code)}"'
+    return f"""
+    <article class="guide-card {'is-live' if enabled else 'is-planned'}" style="--guide-color:{esc(meta['color'])};--guide-accent:{esc(meta['accent'])}">
+      <span class="guide-card__index">UNIVERSO {esc(meta['order'])}</span>
+      <span class="guide-card__orb" aria-hidden="true"><i></i></span>
+      <h3>{esc(meta['name'])}</h3>
+      <p>{esc(meta['ambient'])}</p>
+      <div class="guide-card__worlds">
+        <span>{len(meta['planets'])} MUNDOS</span><span>{esc(meta['status'])}</span>
+      </div>
+      <a class="guide-card__link" {action} href="{route}">{'ENTRAR' if enabled else 'DESCUBRIR'} <i aria-hidden="true">↗</i></a>
+    </article>"""
+
+
+def _featured_link(code: str, meta: dict, planet: dict) -> str:
+    return (
+        f'<a class="featured-link" href="{esc(planet["route"])}" data-warp style="--dot:{esc(meta["color"])}">'
+        f'<span class="featured-link__dot" aria-hidden="true"></span>'
+        f'<span><small>{esc(meta["short"])}</small><strong>{esc(planet["name"])}</strong></span>'
+        f'<i aria-hidden="true">↗</i></a>'
+    )
 
 
 def home(request: Request) -> Response:
@@ -140,20 +164,43 @@ def home(request: Request) -> Response:
     nodes = []
     dialogs = []
     index = []
+    panels = []
+    guides = []
     for module in modules:
-        meta = UNIVERSE_META.get(module["code"])
+        code = module["code"]
+        meta = UNIVERSE_META.get(code)
         if not meta:
             continue
         nodes.append(_world_node(module, meta))
         index.append(_index_item(module, meta))
+        panels.append(_focus_panel(module, meta))
+        guides.append(_guide_card(module, meta))
         if not module["enabled"]:
             dialogs.append(_world_dialog(module, meta))
 
+    cards = {card["code"]: card for card in public_cards()}
+    featured = []
+    for code, planet_code in (("shop", "central"), ("play", "gravity"),
+                              ("play", "nexus-rush"), ("play", "star-hunter"),
+                              ("whatif", "relatos"), ("whatif", "archivo")):
+        meta = cards.get(code)
+        if not meta:
+            continue
+        for planet in meta["planets"]:
+            if planet["code"] == planet_code and planet.get("route"):
+                featured.append(_featured_link(code, meta, planet))
+                break
+
+    config = json.dumps(scene_config(), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     content = render("portal/home.html",
         HERO_TITLE=esc(visual.get("hero_title", "Hay más de un mundo por descubrir")),
         HERO_SUBTITLE=esc(visual.get("hero_subtitle", "")),
         WORLD_NODES="".join(nodes),
         WORLD_DIALOGS="".join(dialogs),
+        WORLD_PANELS="".join(panels),
+        GUIDE_CARDS="".join(guides),
+        FEATURED_LINKS="".join(featured),
+        MULTIVERSE_DATA=config,
         GALAXY_INDEX="".join(index),
     )
     return Response(render_page(
@@ -173,11 +220,14 @@ def universe(request: Request, code: str) -> Response:
         from app.core.http import HTTPError
         raise HTTPError(404, "Universo no encontrado")
     row = module[0]
-    if row["enabled"] and code == "shop":
+    if row["enabled"] and code in {"shop", "whatif"}:
         from app.core.http import redirect
-        return redirect("/shop")
+        return redirect("/what-if" if code == "whatif" else "/shop")
     label, description, _ = UNIVERSE_COPY.get(code, (row["name"], row["description"], ""))
     state = "activo" if row["enabled"] else "planeado y todavía no disponible"
+    meta = UNIVERSE_META.get(code, {})
+    planets = "".join(_planet_link(planet, bool(row["enabled"])) for planet in meta.get("planets", []))
     content = render("portal/universe.html",
-        NAME=esc(row["name"]), LABEL=esc(label), DESCRIPTION=esc(description), STATE=esc(state))
+        NAME=esc(row["name"]), LABEL=esc(label), DESCRIPTION=esc(description), STATE=esc(state),
+        PLANETS=planets or "<p class=\"hint\">Este universo todavía no tiene mundos declarados.</p>")
     return Response(render_page(row["name"], content, body_class="mode-portal", active="portal", request=request))

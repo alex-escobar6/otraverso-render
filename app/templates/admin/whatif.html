@@ -1,0 +1,42 @@
+<div class="admin-tabs">
+  <a href="/admin/what-if" class="active">WHAT IF</a>
+  <a href="/admin/settings/modules">Universos</a>
+</div>
+<div class="panel">
+  <h2>Estado del universo</h2>
+  <div class="stat-grid">
+    <div class="stat-card"><span>Realidades</span><strong>$REALITIES</strong></div>
+    <div class="stat-card"><span>Líneas temporales</span><strong>$TIMELINES</strong></div>
+    <div class="stat-card"><span>Capítulos</span><strong>$CHAPTERS</strong></div>
+    <div class="stat-card"><span>Intervenciones</span><strong>$INTERVENTIONS</strong></div>
+    <div class="stat-card"><span>Fichas de memoria</span><strong>$MEMORY_CARDS</strong></div>
+    <div class="stat-card"><span>Tareas</span><strong>$JOBS</strong></div>
+    <div class="stat-card"><span>Errores</span><strong>$FAILURES</strong></div>
+  </div>
+  <p class="hint">Proveedor de texto: <strong>$TEXT_PROVIDER</strong> · Proveedor de imágenes: <strong>$IMAGE_PROVIDER</strong></p>
+</div>
+<div class="panel">
+  <h2>Configuración de motores</h2>
+  <form class="form-grid" method="post" action="/admin/what-if/settings">
+    $CSRF
+    $FIELDS
+    <div class="field full"><button class="btn btn-primary" type="submit">Guardar configuración</button></div>
+  </form>
+  <p class="hint">Las claves API se leen únicamente desde variables de entorno y nunca se guardan en la base de datos.</p>
+  <p class="hint">Los colores WHAT IF deben usar #RRGGBB; <code>visual_elements</code> y <code>narrative_templates</code> deben ser JSON válido.</p>
+</div>
+<div class="panel">
+  <h2>Actividad reciente</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Tipo</th><th>Estado</th><th>Etapa</th><th>Error</th><th>Fecha</th><th></th></tr></thead>
+    <tbody>$JOB_ROWS</tbody>
+  </table>
+  $CSRF_PURGE
+</div>
+<div class="panel">
+  <h2>Uso de proveedores · últimas 24 horas</h2>
+  <table>
+    <thead><tr><th>Proveedor</th><th>Operación</th><th>Correctas</th><th>Total</th></tr></thead>
+    <tbody>$USAGE_ROWS</tbody>
+  </table>
+</div>

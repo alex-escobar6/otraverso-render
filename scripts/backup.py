@@ -13,6 +13,9 @@ from app.db import connect  # noqa: E402
 
 
 def main() -> None:
+    if Config.DB_BACKEND == "postgres":
+        raise SystemExit("Con PostgreSQL use el panel de Proveedor o scripts/migrate_sqlite_to_postgres.py; "
+                         "las copias SQLite locales no aplican.")
     if not Config.DB_PATH.exists():
         raise SystemExit(f"No existe la base de datos: {Config.DB_PATH}")
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)

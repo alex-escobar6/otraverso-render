@@ -7,10 +7,9 @@ img{max-width:100%;display:block}
 button,input,select,textarea{font:inherit}
 .container{width:min(1180px,92vw);margin-inline:auto}
 .site-header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem max(4vw,1rem);backdrop-filter:blur(14px);background:rgba(7,7,19,.72);border-bottom:1px solid rgba(255,255,255,.08)}
-.brand{display:flex;align-items:center;gap:.55rem;font-weight:700;letter-spacing:.12em;font-size:.95rem}
-.brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-size:1.1rem;box-shadow:0 0 24px color-mix(in srgb,var(--primary) 55%,transparent)}
-.brand-mark span{color:#08111d}
-.brand-image{max-height:36px;max-width:150px;object-fit:contain}
+.brand{display:flex;align-items:center;min-height:40px;font-weight:700;letter-spacing:.08em;font-size:.95rem}
+.brand-logo{width:clamp(140px,15vw,196px);height:38px;object-fit:contain;object-position:left center;filter:drop-shadow(0 0 14px rgba(34,211,238,.22))}
+.brand-wordmark{width:clamp(140px,15vw,196px)}
 .site-nav{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap}
 .nav-link{padding:.5rem .75rem;border-radius:999px;color:#c8c8dd;font-size:.9rem;transition:background .2s,color .2s}
 .nav-link:hover,.nav-link.active{background:rgba(255,255,255,.09);color:#fff}
@@ -200,6 +199,8 @@ tr:hover td{background:#fafaff}
 .flash.error{background:#ffe8eb;color:#a22335}
 .chart-bars{display:flex;align-items:end;gap:.3rem;height:130px}
 .chart-bars div{flex:1;background:linear-gradient(180deg,var(--primary),var(--secondary));border-radius:5px 5px 0 0;min-height:3px}
+.page-status-banner{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:baseline;padding:.8rem 1rem;background:#fff4d6;color:#5a4100;border-bottom:1px solid #f0d28a;font-size:.9rem}
+.page-status-banner strong{letter-spacing:.08em;font-size:.75rem}
 /* Responsive */
 @media(max-width:980px){
  .portal-grid,.shop-hero .container,.product-detail{grid-template-columns:1fr}

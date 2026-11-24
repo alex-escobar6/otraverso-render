@@ -1,0 +1,42 @@
+<section class="play-profile" data-play-profile data-play-csrf="$PLAY_CSRF" aria-labelledby="play-profile-titulo">
+  <header class="play-profile__header">
+    <button class="play-profile__close" type="button" data-play-profile-close aria-label="Cerrar perfil">CERRAR</button>
+    <p class="play-profile__eyebrow"><span aria-hidden="true"></span> OTRAVERSO · PERFIL PLAY</p>
+    <h1 id="play-profile-titulo">Tu progreso en PLAY</h1>
+    <p class="play-profile__intro">Tu identidad de jugador, tus logros y tus secretos se guardan primero en este dispositivo y se sincronizan con el nexo cuando está disponible.</p>
+  </header>
+
+  <div class="play-profile__identity" aria-label="Resumen del perfil">
+    <div class="play-profile__stat">
+      <span>ID PLAY</span>
+      <strong data-profile-id>—</strong>
+    </div>
+    <div class="play-profile__stat">
+      <span>Nivel</span>
+      <strong data-profile-level>—</strong>
+    </div>
+    <div class="play-profile__stat">
+      <span>Experiencia</span>
+      <strong data-profile-xp>—</strong>
+    </div>
+  </div>
+
+  <div class="play-profile__grid">
+    <section class="play-profile__card" aria-labelledby="play-profile-logros">
+      <h2 id="play-profile-logros">Logros</h2>
+      <ul class="play-profile__list" data-profile-achievements aria-live="polite"></ul>
+    </section>
+
+    <section class="play-profile__card" aria-labelledby="play-profile-secretos">
+      <h2 id="play-profile-secretos">Secretos y coleccionables</h2>
+      <ul class="play-profile__list" data-profile-collectibles aria-live="polite"></ul>
+    </section>
+
+    <section class="play-profile__card play-profile__card--wide" aria-labelledby="play-profile-partidas">
+      <h2 id="play-profile-partidas">Últimas partidas</h2>
+      <ol class="play-profile__list" data-profile-results aria-live="polite"></ol>
+    </section>
+  </div>
+
+  <p class="play-profile__footnote">Si la conexión no está disponible, tu avance sigue accesible en este navegador y se enviará al backend en la siguiente sincronización.</p>
+</section>

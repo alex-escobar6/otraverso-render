@@ -1,0 +1,144 @@
+<section class="wi-section wi-container wi-studio" data-wi-studio data-reality-id="$REALITY_ID">
+  <a class="wi-back" href="/what-if/biblioteca">← BIBLIOTECA</a>
+  <div class="wi-section__head wi-section__head--row">
+    <div>
+      <p class="wi-eyebrow">TALLER DE LA REALIDAD · INVENTARIO DEL MUNDO</p>
+      <h1>Dirección del mundo</h1>
+      <p data-wi-title>Cargando…</p>
+    </div>
+    <a class="wi-btn wi-btn--primary" data-wi-open-room>ABRIR SALA NARRATIVA</a>
+  </div>
+
+  <div class="wi-studio__grid">
+    <section class="wi-panel">
+      <h2>Premisa y descripción</h2>
+      <form data-wi-meta-form>
+        <input type="hidden" name="csrf" value="$CSRF">
+        <label>Nombre<input name="title" data-wi-meta="title" maxlength="140"></label>
+        <label>Descripción<textarea name="description" data-wi-meta="description" rows="4" maxlength="2000"></textarea></label>
+        <button class="wi-btn wi-btn--small" type="submit">GUARDAR CAMBIOS</button>
+      </form>
+      <h2>Reglas</h2>
+      <p class="wi-hint">Las reglas propuestas por el motor no se convierten en reglas establecidas sin tu confirmación.</p>
+      <div class="wi-list" data-wi-rules></div>
+    </section>
+
+    <section class="wi-panel wi-panel--modes">
+      <h2>Modos y parámetros narrativos</h2>
+      <form data-wi-modes-form>
+        <input type="hidden" name="csrf" value="$CSRF">
+        <div class="wi-config-grid">
+          <label class="wi-switch">
+            <span>Apocalipsis</span>
+            <input type="hidden" name="apocalypse" value="0">
+            <input type="checkbox" name="apocalypse" value="1">
+            <span class="wi-switch__track" aria-hidden="true"></span>
+          </label>
+          <label class="wi-switch wi-switch--danger">
+            <span>Locura</span>
+            <input type="hidden" name="crazy" value="0">
+            <input type="checkbox" name="crazy" value="1">
+            <span class="wi-switch__track" aria-hidden="true"></span>
+          </label>
+          <label class="wi-switch wi-switch--limitless">
+            <span>Sin Límites</span>
+            <input type="hidden" name="unlimited" value="0">
+            <input type="checkbox" name="unlimited" value="1">
+            <span class="wi-switch__track" aria-hidden="true"></span>
+          </label>
+          <label>Nivel apocalipsis
+            <select name="apocalypse_level" data-wi-options="apocalypse_levels">
+              <option value="gradual">Gradual</option>
+              <option value="acelerado">Acelerado</option>
+              <option value="inevitable">Inevitable</option>
+              <option value="caos-absoluto">Caos absoluto</option>
+            </select>
+          </label>
+          <label>Nivel de locura
+            <select name="crazy_level" data-wi-options="crazy_levels">
+              <option value="1">Toque extraño</option>
+              <option value="2">Inquietante</option>
+              <option value="3">Absurdo</option>
+              <option value="4">Surrealismo total</option>
+            </select>
+          </label>
+          <label>Longitud de capítulo
+            <select name="chapter_length" data-wi-options="chapter_lengths">
+              <option value="normal" selected>Normal</option>
+              <option value="extenso">Extenso</option>
+              <option value="cinematografico">Cinematográfico</option>
+            </select>
+          </label>
+          <label>Aleatoriedad
+            <select name="randomness" data-wi-options="randomness_levels">
+              <option value="1">Baja</option>
+              <option value="2" selected>Media</option>
+              <option value="3">Alta</option>
+              <option value="4">Extrema</option>
+            </select>
+          </label>
+          <label>Sorpresa
+            <select name="surprise_frequency" data-wi-options="surprise_frequency_levels">
+              <option value="0">Sin sorpresas</option>
+              <option value="25" selected>Ocasional</option>
+              <option value="50">Frecuente</option>
+              <option value="75">Alta</option>
+              <option value="100">Constante</option>
+            </select>
+          </label>
+          <label>Punto de vista
+            <select name="point_of_view" data-wi-options="perspectives">
+              <option value="tercera persona" selected>Tercera persona</option>
+              <option value="primera persona">Primera persona</option>
+              <option value="omnisciente">Narrador omnisciente</option>
+              <option value="testigo">Testigo de los hechos</option>
+              <option value="segunda persona">Segunda persona</option>
+            </select>
+          </label>
+          <label>Personajes iniciales<input name="initial_characters" maxlength="300"></label>
+          <label>Final previsto<input name="ending" maxlength="300"></label>
+        </div>
+        <div class="wi-actions">
+          <button class="wi-btn wi-btn--primary wi-btn--small" type="submit">GUARDAR MODOS</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="wi-panel">
+      <h2>Personajes y lugares</h2>
+      <div class="wi-list" data-wi-characters></div>
+      <div class="wi-list" data-wi-locations></div>
+      <div class="wi-actions">
+        <button class="wi-btn wi-btn--small" type="button" data-wi-generate-map>GENERAR MAPA</button>
+      </div>
+    </section>
+
+    <section class="wi-panel">
+      <h2>Memoria estructurada</h2>
+      <p class="wi-hint">Fichas agrupadas por tipo: estado actual, capítulos, personajes y continuidad.</p>
+      <div class="wi-list" data-wi-studio-memory></div>
+    </section>
+
+    <section class="wi-panel">
+      <h2>Acontecimientos</h2>
+      <div class="wi-list" data-wi-events></div>
+      <h2>Intervenciones recientes</h2>
+      <div class="wi-list" data-wi-interventions></div>
+    </section>
+
+    <section class="wi-panel">
+      <h2>Líneas temporales</h2>
+      <div class="wi-list" data-wi-timelines></div>
+      <h2>Comparar versiones</h2>
+      <div class="wi-inline-form">
+        <select data-wi-compare-left></select>
+        <select data-wi-compare-right></select>
+        <button class="wi-btn wi-btn--small" type="button" data-wi-compare>COMPARAR</button>
+      </div>
+      <div data-wi-compare-result></div>
+      <h2>Historial de versiones</h2>
+      <div class="wi-list" data-wi-versions></div>
+    </section>
+  </div>
+  <div class="wi-status" data-wi-status role="status" aria-live="polite"></div>
+</section>

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Agujero negro de OTRAVERSO PLAY con disco de acreción">
+  <defs>
+    <radialGradient id="pbh-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#f472b6" stop-opacity=".5"/>
+      <stop offset=".34" stop-color="#9d8bff" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#05040f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pbh-disk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#54e8ff" stop-opacity="0"/>
+      <stop offset=".22" stop-color="#54e8ff"/>
+      <stop offset=".5" stop-color="#ffffff"/>
+      <stop offset=".72" stop-color="#f472b6"/>
+      <stop offset="1" stop-color="#fbbf24" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="pbh-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".5" stop-color="#54e8ff"/>
+      <stop offset="1" stop-color="#e9d5ff"/>
+    </linearGradient>
+    <radialGradient id="pbh-core" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#000000"/>
+      <stop offset=".78" stop-color="#01000a"/>
+      <stop offset="1" stop-color="#05030f"/>
+    </radialGradient>
+    <filter id="pbh-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="640" height="360" fill="#04030d"/>
+  <g fill="#dbeafe" opacity=".72">
+    <circle cx="74" cy="58" r="1.4"/><circle cx="174" cy="112" r="1"/><circle cx="286" cy="46" r="1.6"/>
+    <circle cx="430" cy="70" r="1.1"/><circle cx="548" cy="48" r="1.5"/><circle cx="604" cy="138" r="1"/>
+    <circle cx="46" cy="226" r="1.2"/><circle cx="132" cy="296" r="1.6"/><circle cx="286" cy="252" r="1.2"/>
+    <circle cx="512" cy="300" r="1.3"/><circle cx="586" cy="244" r="1.5"/><circle cx="352" cy="332" r="1"/>
+  </g>
+  <circle cx="320" cy="180" r="170" fill="url(#pbh-halo)"/>
+  <g fill="none" stroke="#9d8bff" stroke-opacity=".2">
+    <ellipse cx="320" cy="180" rx="248" ry="94" transform="rotate(-18 320 180)"/>
+    <ellipse cx="320" cy="180" rx="210" ry="78" transform="rotate(14 320 180)"/>
+  </g>
+  <g transform="translate(320 180) rotate(-18)">
+    <g fill="none" stroke="url(#pbh-disk)" stroke-linecap="round">
+      <ellipse rx="158" ry="42" stroke-width="20" opacity=".24"/>
+      <ellipse rx="134" ry="35" stroke-width="12" opacity=".5"/>
+      <ellipse rx="112" ry="29" stroke-width="7" opacity=".78"/>
+      <ellipse rx="92" ry="24" stroke-width="4" opacity=".95"/>
+    </g>
+    <g fill="#fff8dc" opacity=".9">
+      <circle cx="128" cy="-8" r="2.4"/><circle cx="-112" cy="12" r="2"/>
+      <circle cx="74" cy="20" r="1.8"/><circle cx="-68" cy="16" r="2.2"/>
+      <circle cx="146" cy="6" r="1.6"/><circle cx="-142" cy="-4" r="1.7"/>
+    </g>
+  </g>
+  <g filter="url(#pbh-glow)" fill="none">
+    <circle cx="320" cy="180" r="76" stroke="url(#pbh-ring)" stroke-width="4" opacity=".95"/>
+    <circle cx="320" cy="180" r="86" stroke="#54e8ff" stroke-width="1.4" opacity=".55"/>
+    <circle cx="320" cy="180" r="96" stroke="#f472b6" stroke-width="1" opacity=".36"/>
+  </g>
+  <circle cx="320" cy="180" r="74" fill="url(#pbh-core)"/>
+  <g fill="none" stroke="#54e8ff" stroke-opacity=".35" stroke-width="1">
+    <path d="M228 132 A104 104 0 0 1 412 132"/>
+    <path d="M230 230 A104 104 0 0 0 410 230"/>
+  </g>
+</svg>

@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: otraverso
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - 'app.main:application'
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: PRODUCTION
+        value: "true"
+      - key: DEBUG
+        value: "false"
+      - key: BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: STORAGE_BACKEND
+        value: "supabase"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: "otraverso"
+      - key: LOG_TO_STDOUT
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "600"
+      - key: MAX_UPLOAD_MB
+        value: "8"
+      - key: CURRENCY
+        value: "COP"
+      - key: WHATSAPP_DEFAULT
+        sync: false
+      - key: WHATIF_DEBUG
+        value: "false"

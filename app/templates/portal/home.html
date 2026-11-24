@@ -1,7 +1,13 @@
-<section class="galaxy-stage" id="galaxia" aria-label="Explorador de universos OTRAVERSO">
+<section class="galaxy-stage" id="galaxia" data-multiverse aria-label="Explorador del multiverso OTRAVERSO">
   <canvas class="galaxy-canvas" aria-hidden="true"></canvas>
   <div class="galaxy-atmosphere" aria-hidden="true"></div>
   <div class="galaxy-flash" aria-hidden="true"></div>
+
+  <nav class="galaxy-map" data-universe-map aria-label="Mapa de navegación del multiverso">
+    <a href="/">OTRAVERSO</a><i aria-hidden="true">→</i>
+    <span data-map-universe>MULTIVERSO</span><i aria-hidden="true">→</i>
+    <span data-map-planet>—</span>
+  </nav>
 
   <div class="galaxy-ui">
     <header class="galaxy-intro">
@@ -11,20 +17,98 @@
       <p class="galaxy-sub">$HERO_SUBTITLE</p>
       <div class="galaxy-actions">
         <a class="galaxy-primary" href="/shop" data-warp>ENTRAR A SHOP <i aria-hidden="true">↗</i></a>
-        <a class="galaxy-secondary" href="#indice-universos">VER UNIVERSOS <i aria-hidden="true">↓</i></a>
+        <a class="galaxy-play" href="/play" data-warp data-world="play">ENTRAR A PLAY <i aria-hidden="true">↗</i></a>
+        <a class="galaxy-secondary" href="#multiverso">CONOCER EL MULTIVERSO <i aria-hidden="true">↓</i></a>
+        <button class="galaxy-game-start" type="button" data-hunter-start>✦ CAZADOR DE ESTRELLAS</button>
       </div>
-      <p class="galaxy-hint">Arrastra y haz zoom para explorar · Doble clic o 0 para volver</p>
+      <div class="galaxy-controls">
+        <button class="galaxy-explore-toggle" type="button" data-explore-toggle aria-pressed="false"
+                title="Activa el zoom espacial con la rueda y el arrastre táctil">
+          <span class="galaxy-explore-toggle__dot" aria-hidden="true"></span>
+          <span data-explore-label>EXPLORAR ESPACIO</span>
+        </button>
+        <span class="galaxy-mode-note" data-mode-note>DESPLAZAMIENTO DE PÁGINA ACTIVO</span>
+      </div>
+      <p class="galaxy-hint">Arrastra y haz zoom para explorar · Rueda para recorrer la página · Activa EXPLORAR para zoom espacial · Doble clic o 0 para volver</p>
+      <button class="galaxy-recenter" type="button" data-recenter aria-hidden="true" tabindex="-1">◎ VOLVER AL NÚCLEO</button>
       <p class="galaxy-secret" data-secret-note role="status" aria-live="polite" hidden>SEÑAL NO CATALOGADA · NAVE EXTRATERRESTRE DETECTADA</p>
-      <p class="galaxy-discoveries" data-discovery-progress aria-live="polite" hidden>DESCUBRIMIENTOS 0 / 2</p>
     </header>
 
     <div class="galaxy-worlds">$WORLD_NODES</div>
+    <div class="galaxy-focus-layer">$WORLD_PANELS</div>
+
+    <div class="galaxy-exploration" data-exploration>
+      <button class="galaxy-exploration__toggle" type="button" data-discovery-toggle aria-expanded="false" aria-controls="exploracion-descubrimientos">EXPLORACIÓN</button>
+      <div class="galaxy-exploration__panel" id="exploracion-descubrimientos" data-discovery-panel hidden>
+        <span class="galaxy-exploration__label">EXPLORACIÓN</span>
+        <p class="galaxy-discoveries" data-discovery-progress aria-live="polite" hidden>DESCUBRIMIENTOS 0 / 2</p>
+        <span class="galaxy-exploration__note">SEÑALES CATALOGADAS</span>
+      </div>
+    </div>
+
+    <div class="galaxy-game" data-hunter-panel hidden>
+      <span class="galaxy-game__eyebrow">OTRAVERSO PLAY · ACTIVIDAD</span>
+      <strong class="galaxy-game__title">CAZADOR DE ESTRELLAS</strong>
+      <div class="galaxy-game__stats">
+        <span>ENERGÍA <b data-hunter-score>0</b></span>
+        <span>TIEMPO <b data-hunter-time>32</b>s</span>
+      </div>
+      <p class="galaxy-game__result" data-hunter-result role="status" aria-live="polite" hidden></p>
+      <div class="galaxy-game__actions">
+        <button type="button" data-hunter-restart>Reiniciar</button>
+        <button type="button" data-hunter-exit>Salir</button>
+      </div>
+    </div>
 
     <nav class="galaxy-index" id="indice-universos" aria-label="Índice de universos">
       <span class="galaxy-index__label">UNIVERSOS</span>
       $GALAXY_INDEX
     </nav>
+
+    <div class="galaxy-explore-hud" data-explore-hud hidden aria-label="Controles de exploración libre">
+      <div class="galaxy-explore-hud__top">
+        <div>
+          <span class="galaxy-explore-hud__label">EXPLORANDO UNIVERSO</span>
+          <strong class="galaxy-explore-hud__name" data-explore-universe-name>UNIVERSO</strong>
+        </div>
+        <button class="galaxy-explore-hud__exit" type="button" data-explore-exit>VOLVER AL UNIVERSO <i aria-hidden="true">↩</i></button>
+      </div>
+      <p class="galaxy-explore-hud__hint"><b>WASD</b> mover · <b>ESPACIO</b> subir · <b>C</b> bajar · <b>Q/E</b> girar · <b>RUEDA</b> zoom · <b>MAYÚS</b> impulso · <b>ESC</b> volver</p>
+      <div class="galaxy-explore-stick" data-explore-stick aria-label="Joystick de exploración">
+        <span class="galaxy-explore-stick__knob" data-explore-stick-knob aria-hidden="true"></span>
+      </div>
+    </div>
   </div>
 </section>
 
+<section class="multiverse-guide" id="multiverso" aria-labelledby="multiverso-title">
+  <div class="container">
+    <div class="multiverse-guide__head">
+      <div>
+        <span class="eyebrow">EL MULTIVERSO</span>
+        <h2 id="multiverso-title">OTRAVERSO no es una galaxia.<br>Es un sistema de realidades.</h2>
+      </div>
+      <p>Cada universo tiene su propia luz, sus vecinos y sus reglas. Acércate a uno, descubre sus mundos y elige una experiencia. Los que aún no están listos se muestran como dimensiones en desarrollo, sin datos simulados.</p>
+    </div>
+
+    <div class="guide-grid">$GUIDE_CARDS</div>
+
+    <div class="multiverse-guide__bottom">
+      <div class="guide-note">
+        <span class="eyebrow">EN DESARROLLO</span>
+        <h3>LABS</h3>
+        <p>Una dimensión declarada, todavía sin funcionalidades activas. Su identidad visual ya forma parte del multiverso; sus planetas se revelarán cuando existan experiencias reales.</p>
+        <a href="/what-if">ENTRAR A WHAT IF <i aria-hidden="true">↗</i></a>
+        <a href="/universos/labs">VER LABS <i aria-hidden="true">↗</i></a>
+      </div>
+      <div class="guide-featured">
+        <span class="eyebrow">EXPERIENCIAS DESTACADAS</span>
+        <div class="featured-list">$FEATURED_LINKS</div>
+        <p class="guide-featured__foot">Los descubrimientos ocultos siguen vivo en la escena superior. No aparecen hasta que exploras.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="application/json" id="multiverso-config">$MULTIVERSE_DATA</script>
 $WORLD_DIALOGS

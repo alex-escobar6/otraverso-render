@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from app.config import Config, UPLOAD_DIR
+from app.config import Config
 from app.core.auth import login as auth_login
 from app.core.auth import logout as auth_logout
 from app.core.http import HTTPError, Request, Response, redirect
@@ -16,15 +16,18 @@ from app.core.render import esc, money, render, render_page
 from app.db import audit as db_audit
 from app.db import query, settings_group
 from app.security import safe_filename
+from app.services import storage
 
 SIDEBAR = [
     ("dashboard", "Dashboard", "/admin", "dashboard.view"),
+    ("pages", "Gestión de páginas", "/admin/pages", "pages.manage"),
     ("products", "Productos", "/admin/products", "products.view"),
     ("inventory", "Inventario", "/admin/inventory", "inventory.view"),
     ("orders", "Pedidos", "/admin/orders", "orders.view"),
     ("requests", "Solicitudes", "/admin/requests", "orders.view"),
     ("customers", "Clientes", "/admin/customers", "customers.view"),
     ("marketing", "Marketing", "/admin/marketing", "marketing.edit"),
+    ("whatif", "WHAT IF", "/admin/what-if", "whatif.view"),
     ("coverage", "Cobertura", "/admin/coverage", "coverage.manage"),
     ("whatsapp", "WhatsApp", "/admin/settings/whatsapp", "whatsapp.manage"),
     ("settings", "Configuración", "/admin/settings/commercial", "settings.edit"),
@@ -42,10 +45,10 @@ def register(router) -> None:
     router.post("/admin/logout", logout, name="admin.logout")
     router.get("/admin", dashboard, permission="dashboard.view", name="admin.dashboard")
 
-    from . import analytics, coverage, customers, inventory, marketing, orders, products
+    from . import analytics, coverage, customers, inventory, marketing, orders, pages, products, whatif
     from . import settings as settings_module
     from . import users, backups
-    for module in (products, inventory, orders, customers, marketing, coverage,
+    for module in (products, inventory, orders, customers, marketing, whatif, pages, coverage,
                    settings_module, analytics, users, backups):
         module.register(router)
 
@@ -158,8 +161,7 @@ def _save_upload(upload) -> str:
     except Exception:
         raise HTTPError(400, "El archivo no es una imagen válida")
     name = safe_filename(upload.filename)
-    (UPLOAD_DIR / name).write_bytes(upload.data)
-    return f"/uploads/{name}"
+    return storage.save_upload(name, upload.data, upload.content_type)
 
 
 def upload_image(request: Request, field: str = "image") -> str:
@@ -179,9 +181,7 @@ def upload_images(request: Request, field: str = "images") -> list[str]:
 def remove_upload(url: str) -> None:
     if not url.startswith("/uploads/"):
         return
-    path = UPLOAD_DIR / Path(url).name
-    if path.exists() and path.is_file():
-        path.unlink()
+    storage.delete_upload(urllib.parse.unquote(Path(url).name))
 
 
 def date_bounds(request: Request) -> tuple[str, str]:
@@ -218,7 +218,7 @@ def login_submit(request: Request) -> Response:
     response = go("/admin", ok="Sesión iniciada")
     cookie = (f"otraverso_session={token}; HttpOnly; SameSite=Lax; Path=/; "
               f"Max-Age={Config.SESSION_HOURS * 3600}")
-    if Config.BASE_URL.startswith("https://"):
+    if Config.BASE_URL.startswith("https://") or request.scheme == "https":
         cookie += "; Secure"
     response.headers["Set-Cookie"] = cookie
     return response

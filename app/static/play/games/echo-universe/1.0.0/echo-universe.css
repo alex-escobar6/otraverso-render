@@ -1,0 +1,12 @@
+.play-game--echo-universe {
+  background: radial-gradient(circle at 50% 30%, #1b1445 0%, #070814 75%);
+}
+.play-game--echo-universe [data-game-canvas] {
+  background: #070814;
+}
+.play-game--echo-universe [data-game-start],
+.play-game--echo-universe [data-game-result],
+.play-game--echo-universe [data-game-paused] {
+  background: rgba(7, 8, 20, 0.76);
+  color: #eef3ff;
+}

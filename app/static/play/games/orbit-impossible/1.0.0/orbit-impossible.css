@@ -1,0 +1,12 @@
+.play-game--orbit-impossible {
+  background: radial-gradient(circle at center, #0b1230 0%, #050814 75%);
+}
+.play-game--orbit-impossible [data-game-canvas] {
+  background: #050814;
+}
+.play-game--orbit-impossible [data-game-start],
+.play-game--orbit-impossible [data-game-result],
+.play-game--orbit-impossible [data-game-paused] {
+  background: rgba(5, 8, 20, 0.76);
+  color: #edf4ff;
+}

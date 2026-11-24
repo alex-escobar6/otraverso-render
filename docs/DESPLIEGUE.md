@@ -6,6 +6,20 @@
 - Sin Node/npm, PostgreSQL, Docker ni gunicorn instalados.
 - Dependencia opcional: Pillow para imágenes; el resto funciona con biblioteca estándar.
 
+## Dependencias y licencias
+
+| Componente | Uso | Origen | Licencia |
+| --- | --- | --- | --- |
+| Python 3.12 y biblioteca estándar | WSGI, SQLite, hashing, plantillas, HTTP | Entorno del sistema | PSF License |
+| Pillow 10.2.0 | Validación/redimensionado de imágenes; requerido por la suite de pruebas | PyPI | HPND |
+| gunicorn 22.0.0 | Servidor WSGI de producción | PyPI | MIT |
+| psycopg[binary] 3.2.3 | Adaptador PostgreSQL en producción | PyPI | LGPL-3.0 |
+| Three.js r149 | Único motor WebGL, usado solo por GRAVITY | `app/static/js/vendor/three.min.js` | MIT, cabecera SPDX incluida |
+| JavaScript vanilla | Galaxia, PLAY, hub, minijuegos y runtime WebGL | Código propio del repositorio | Propio del proyecto |
+| CSS y SVG | Identidad visual y componentes | Código propio del repositorio | Propio del proyecto |
+
+No hay gestores de paquetes JavaScript. Las dependencias Python de producción están declaradas en `requirements.txt`. La instalación local sigue funcionando con SQLite; en Render son obligatorios PostgreSQL y almacenamiento externo. Revísense los avisos legales de Three.js, Pillow, gunicorn y psycopg según la jurisdicción aplicable.
+
 ## Preparación
 
 ```bash
@@ -21,6 +35,7 @@ Editar `.env`:
 - `BASE_URL`: URL pública, usada en canonical y sitemap.
 - `ADMIN_EMAIL` y `ADMIN_PASSWORD`: solo para la creación/inicialización; no dejar la contraseña temporal.
 - `WHATSAPP_DEFAULT`: número en formato internacional sin `+` ni espacios.
+- `WHATIF_API_KEY` y `WHATIF_IMAGE_API_KEY`: opcionales; solo si se configuran proveedores externos en `/admin/what-if`.
 - `HOST`/`PORT`: interfaz del servidor de desarrollo.
 
 ## Inicialización
@@ -44,10 +59,29 @@ app.main:application
 Debe ejecutarse detrás de un servidor WSGI y un proxy inverso con HTTPS. Ejemplo conceptual con gunicorn (instalarlo previamente):
 
 ```bash
-gunicorn --workers 2 --bind 127.0.0.1:8000 'app.main:application'
+gunicorn --workers 2 --bind 0.0.0.0:8000 'app.main:application'
 ```
 
 El proxy debe reenviar `Host`, `X-Forwarded-Proto` y servir `/static/` directamente si se desea. `BASE_URL` debe coincidir con el dominio público.
+
+## Render (plan gratuito)
+
+`render.yaml` define un Web Service gratuito con `gunicorn` y `healthCheckPath: /health`. El sistema de archivos de Render Free es efímero: no se usa SQLite ni `data/uploads/` como fuente de verdad.
+
+Antes de crear el servicio:
+
+1. Crear una base PostgreSQL externa. Supabase Free es viable: 500 MB, hasta 2 proyectos activos y pausa tras una semana de inactividad. Copiar su cadena de conexión a `DATABASE_URL`.
+2. Crear en Supabase Storage un bucket privado, por defecto `otraverso`, y un rol de servicio. Copiar `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` como secretos de Render.
+3. Importar los datos actuales sin borrar destino:
+
+```bash
+DATABASE_URL='postgresql://...' python3 scripts/migrate_sqlite_to_postgres.py --confirm
+```
+
+4. Crear el Web Service desde `render.yaml` y completar las variables `sync:false`: `BASE_URL`, `DATABASE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `WHATSAPP_DEFAULT`.
+5. Tras el primer despliegue, verificar `GET /health` y cambiar la contraseña administrativa inicial.
+
+No definir `DATABASE_PATH`, `HOST` fijo ni rutas locales en Render. No poner secretos en `render.yaml`, JavaScript ni logs. Render puede apagar servicios gratuitos por inactividad; para disponibilidad estricta 24/7 se requiere un plan de pago, que no se activa sin autorización.
 
 ## Permisos
 
@@ -73,7 +107,7 @@ Restaurar (crea antes un respaldo de la BD actual y valida `integrity_check`):
 python3 scripts/restore.py otraverso_20261117_120000_cli.db --confirm
 ```
 
-También hay copias y descarga autenticada en `/admin/backups` para usuarios con `backup.manage`.
+También hay copias y descarga autenticada en `/admin/backups` para usuarios con `backup.manage`. Con `DATABASE_URL`, `/admin/backups/create` genera un volcado JSON de todas las tablas; en SQLite genera un archivo `.db`.
 
 ## Actualizaciones
 
@@ -87,9 +121,10 @@ No editar `PRAGMA user_version` manualmente. Las columnas nuevas se agregan desd
 ## Verificación rápida
 
 ```bash
-curl -I http://127.0.0.1:8000/
-curl -I http://127.0.0.1:8000/shop
-curl -I http://127.0.0.1:8000/admin/login
+curl -i http://localhost:8000/health
+curl -I http://localhost:8000/
+curl -I http://localhost:8000/shop
+curl -I http://localhost:8000/admin/login
 ```
 
 Respuesta esperada: `200 OK`. El panel requiere inicio de sesión y las rutas sin permiso devuelven `403`.

@@ -1,0 +1,59 @@
+<div class="play-hub" data-hub-mode="hub" aria-label="Hub interactivo de OTRAVERSO PLAY">
+  <div class="play-hub__viewport" data-hub-viewport aria-hidden="true"></div>
+
+  <div class="play-hub__overlay">
+    <div class="play-hub__topbar">
+      <div class="play-hub__brand">
+        <p class="play-hub__eyebrow">OTRAVERSO · PLAY</p>
+        <h1 class="play-hub__title">OTRAVERSO PLAY<em>HUB DE UNIVERSOS</em></h1>
+        <p class="play-hub__subtitle">Un núcleo de luz sostiene una ciudad monumental suspendida: torres, arcos y pasarelas orbitan un mundo vivo donde cada Universo guarda un juego por descubrir.</p>
+      </div>
+      <div class="play-hub__toolbar">
+        <a class="play-hub__button play-hub__button--ghost" href="/" data-warp>NEXO</a>
+        <button class="play-hub__button play-hub__button--ghost" type="button" data-play-profile-toggle>PERFIL</button>
+        <button class="play-hub__button play-hub__button--ghost" type="button" data-hub-help-toggle aria-expanded="false" aria-controls="play-hub-help-panel">AYUDA</button>
+        <button class="play-hub__button play-hub__button--primary" type="button" data-explore-button>EXPLORAR UNIVERSO</button>
+        <button class="play-hub__button play-hub__button--ghost" type="button" data-hub-return hidden>VOLVER AL HUB</button>
+      </div>
+    </div>
+
+    <div class="play-hub__feed" data-hub-feed role="status" aria-live="polite" aria-label="Registro de eventos del mundo" hidden></div>
+
+    <div class="play-hub__body">
+      <div class="play-hub__stage">
+        <div class="play-hub__zones" data-hub-zones aria-label="Estaciones y sectores de juego del mundo"></div>
+      </div>
+      <aside class="play-hub__context" data-hub-context aria-live="polite" aria-label="Información contextual">
+        <p class="play-hub__context-eyebrow" data-hub-context-eyebrow>OTRAVERSO PLAY</p>
+        <h2 class="play-hub__context-title" data-hub-context-title>OTRAVERSO PLAY</h2>
+        <p class="play-hub__context-text" data-hub-context-text>Selecciona una zona planetaria para ver su información.</p>
+        <p class="play-hub__context-meta" data-hub-context-meta>MODO HUB</p>
+        <button class="play-hub__button play-hub__button--primary" type="button" data-hub-context-action>ENTRAR</button>
+      </aside>
+    </div>
+  </div>
+
+  <div class="play-hub__help" id="play-hub-help-panel" data-hub-help hidden>
+    <h2>CONTROLES</h2>
+    <p>HUB: enfoca una zona con <kbd>Tab</kbd> o haz clic para ver su info. Usa <kbd>Enter</kbd>, <kbd>Espacio</kbd> o doble clic para entrar.</p>
+    <p>EXPLORAR: <kbd>WASD</kbd> mueve, <kbd>Espacio</kbd> y <kbd>Ctrl</kbd> suben o bajan, <kbd>Shift</kbd> acelera, el ratón orienta, la rueda acerca y el clic interactúa.</p>
+    <p><kbd>Esc</kbd> vuelve al centro del hub sin perder descubrimientos. El registro de eventos aparece solo cuando el mundo reacciona.</p>
+  </div>
+
+  <div class="play-hub__explore-controls" data-explore-controls hidden>
+    <div class="play-hub__joystick" data-touch-joy aria-label="Joystick de movimiento" role="application" tabindex="0">
+      <span class="play-hub__joystick-nub" data-touch-joy-nub aria-hidden="true"></span>
+    </div>
+    <div class="play-hub__look-zone" data-touch-look aria-label="Zona táctil de orientación" tabindex="0">ARRASTRA PARA ORIENTAR</div>
+    <div class="play-hub__control-stack">
+      <button class="play-hub__touch-button" type="button" data-touch-up aria-label="Subir">SUBIR</button>
+      <button class="play-hub__touch-button" type="button" data-touch-down aria-label="Bajar">BAJAR</button>
+    </div>
+    <div class="play-hub__control-stack">
+      <button class="play-hub__touch-button play-hub__touch-button--accent" type="button" data-touch-interact aria-label="Interactuar">INTERACTUAR</button>
+      <button class="play-hub__touch-button" type="button" data-touch-back aria-label="Volver al hub">VOLVER</button>
+    </div>
+  </div>
+
+  <span class="play-hub__mode-badge" aria-hidden="true">MODO HUB</span>
+</div>

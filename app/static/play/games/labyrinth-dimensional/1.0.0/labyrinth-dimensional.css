@@ -1,0 +1,12 @@
+.play-game--labyrinth-dimensional {
+  background: linear-gradient(180deg, #0b1020 0%, #070a14 100%);
+}
+.play-game--labyrinth-dimensional [data-game-canvas] {
+  background: #070a14;
+}
+.play-game--labyrinth-dimensional [data-game-start],
+.play-game--labyrinth-dimensional [data-game-result],
+.play-game--labyrinth-dimensional [data-game-paused] {
+  background: rgba(7, 10, 20, 0.78);
+  color: #e8f2ff;
+}

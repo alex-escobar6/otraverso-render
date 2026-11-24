@@ -1,8 +1,10 @@
 """Copias de seguridad SQLite bajo demanda, con registro en bitácora."""
 from __future__ import annotations
 
+import base64
+import json
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 
 from app.config import BACKUP_DIR, Config
 from app.core.http import HTTPError, Request, Response
@@ -32,7 +34,36 @@ def backups_home(request: Request) -> Response:
     return admin_page(request, "Copias de seguridad", content, "backups")
 
 
+def _postgres_dump(request: Request) -> Response:
+    tables = [row[0] for row in query(
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema=current_schema() AND table_type='BASE TABLE' ORDER BY table_name"
+    )]
+    dump = {"format": "otraverso-postgres-json", "version": 1, "tables": {}}
+    for table in tables:
+        rows = query(f"SELECT * FROM {table}")
+        encoded = []
+        for row in rows:
+            item = {}
+            for key in row.keys():
+                value = row[key]
+                if isinstance(value, (bytes, bytearray, memoryview)):
+                    value = {"__base64__": base64.b64encode(bytes(value)).decode("ascii")}
+                elif isinstance(value, (datetime, date)):
+                    value = value.isoformat(sep=" ")
+                item[key] = value
+            encoded.append(item)
+        dump["tables"][table] = encoded
+    filename = f"otraverso_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    body = json.dumps(dump, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    audit(request, "create", "backup", filename)
+    return Response(body, content_type="application/json; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
 def backup_create(request: Request) -> Response:
+    if Config.DB_BACKEND == "postgres":
+        return _postgres_dump(request)
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"otraverso_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
     target = BACKUP_DIR / filename

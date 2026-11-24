@@ -1,0 +1,56 @@
+<section class="wi-section wi-container wi-ideas" data-wi-ideas data-wi-ideas-enabled="$IDEAS_ENABLED">
+  <a class="wi-back" href="/what-if">← VOLVER A WHAT IF</a>
+  <div class="wi-section__head">
+    <p class="wi-eyebrow">GENERADOR DE IDEAS / ESTANTE DE VARIANTES</p>
+    <h1>Ideas para abrir un mundo</h1>
+    <p>Genera variantes narrativas con género, tono, modo y cantidad controlada. Guarda tus favoritas y lleva cualquier idea al taller de realidades.</p>
+    <p class="wi-engine-note" data-wi-ai-status>Conociendo al motor narrativo…</p>
+    <p class="wi-lab-line" data-wi-lab-status>BIBLIOTECA ACTIVA · EXPLORANDO VARIANTES</p>
+    <p class="wi-stability" data-wi-stability>98.6%</p>
+  </div>
+
+  <textarea hidden data-wi-server-config aria-hidden="true">$CONFIG</textarea>
+
+  <form class="wi-ideas__form" data-wi-ideas-form>
+    <input type="hidden" name="csrf" value="$CSRF_TOKEN">
+    <label>Cantidad<input type="number" name="count" data-wi-ideas-count min="1" max="8" value="4"></label>
+    <label>Género<select name="genre" data-wi-ideas-genre><option value="">Automático</option></select></label>
+    <label>Modo<select name="mode" data-wi-ideas-mode>
+      <option value="normal">Normal</option>
+      <option value="apocalipsis">Apocalipsis</option>
+      <option value="loco">Loco</option>
+      <option value="combinado">Combinado</option>
+      <option value="sin-limites">Sin Límites</option>
+      <option value="sin-limites-apocalipsis">Sin Límites + Apocalipsis</option>
+      <option value="sin-limites-loco">Sin Límites + Loco</option>
+      <option value="sin-limites-combinado">Sin Límites + Combinado</option>
+    </select></label>
+    <label>Variación<select name="variation" data-wi-ideas-variation>
+      <option value="none">Automática</option>
+      <option value="genre">Dentro del género</option>
+      <option value="darker">Más oscura</option>
+      <option value="absurd">Absurda</option>
+      <option value="twist">Con giro</option>
+      <option value="mix">Mezcla de géneros</option>
+    </select></label>
+    <label class="wi-field-full">Género personalizado (opcional)<input name="genre_override" maxlength="80" placeholder="Ej.: terror, comedia…"></label>
+    <div class="wi-actions">
+      <button class="wi-btn wi-btn--primary" type="submit" data-wi-ideas-generate>GENERAR VARIANTES</button>
+      <button class="wi-btn wi-btn--ghost" type="button" data-wi-ideas-favorites>Solo favoritas</button>
+    </div>
+  </form>
+
+  <div class="wi-status" data-wi-status role="status" aria-live="polite"></div>
+
+  <div class="wi-ideas__bar">
+    <h2>Variantes generadas</h2>
+    <p data-wi-ideas-meta></p>
+  </div>
+  <div class="wi-ideas__grid" data-wi-ideas-grid></div>
+
+  <div class="wi-section__head">
+    <p class="wi-eyebrow">SEÑALES DE INSPIRACIÓN</p>
+    <h2>Ideas de ejemplo</h2>
+  </div>
+  <div class="wi-idea-grid">$IDEAS</div>
+</section>

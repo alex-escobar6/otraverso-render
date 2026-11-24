@@ -1,9 +1,14 @@
 __pycache__/
 *.py[cod]
 .env
+.envy
 data/
+backup/
 *.db
 *.db-wal
 *.db-shm
 *.log
 .DS_Store
+.venv/
+venv/
+.pytest_cache/

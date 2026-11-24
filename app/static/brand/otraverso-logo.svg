@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 64" role="img" aria-labelledby="ot-logo-title">
+  <title id="ot-logo-title">OTRAVERSO</title>
+  <defs>
+    <linearGradient id="ot-logo-a" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/><stop offset=".55" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="ot-logo-b" x1="1" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#f472b6"/><stop offset=".5" stop-color="#c084fc"/><stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <radialGradient id="ot-logo-core" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#8be9ff"/><stop offset="1" stop-color="#7c3aed"/>
+    </radialGradient>
+    <linearGradient id="ot-logo-word" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d8fbff"/><stop offset=".38" stop-color="#ffffff"/><stop offset=".72" stop-color="#ddd2ff"/><stop offset="1" stop-color="#ffd9f0"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4 0)">
+    <g fill="none" stroke-linecap="round">
+      <path d="M9 41 A29 20 -24 0 1 61 22" stroke="url(#ot-logo-a)" stroke-width="3.2"/>
+      <path d="M62 26 A29 20 -24 0 1 16 52" stroke="url(#ot-logo-b)" stroke-width="3.2"/>
+      <path d="M17 15 A25 25 0 0 1 55 49" stroke="url(#ot-logo-b)" stroke-width="1.4" opacity=".75"/>
+    </g>
+    <circle cx="10.5" cy="40" r="2.6" fill="#2dd4bf"/>
+    <circle cx="61.5" cy="21.5" r="2.6" fill="#f472b6"/>
+    <path d="M36 13 L44 32 L36 51 L28 32 Z" fill="url(#ot-logo-core)"/>
+    <path d="M36 25 L39.4 32 L36 39 L32.6 32 Z" fill="#f8fbff"/>
+    <circle cx="36" cy="32" r="2" fill="#0b1030"/>
+  </g>
+  <g transform="translate(84 0)" fill="none" stroke="url(#ot-logo-word)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 16 H38 Q44 16 44 22 V42 Q44 48 38 48 H20 Q14 48 14 42 V22 Q14 16 20 16 Z"/>
+    <path d="M52 16 H80 M66 16 V48"/>
+    <path d="M88 48 V16 H106 Q114 16 114 23 Q114 29 106 30 H88 M102 30 L116 48"/>
+    <path d="M124 48 L136 16 L148 48 M129 38 H143"/>
+    <path d="M156 16 L168 48 L180 16"/>
+    <path d="M210 16 H188 V48 H210 M188 32 H206"/>
+    <path d="M218 48 V16 H236 Q244 16 244 23 Q244 29 236 30 H218 M232 30 L246 48"/>
+    <path d="M282 22 Q278 16 270 16 Q262 16 262 23 Q262 29 272 31 Q282 33 282 41 Q282 48 272 48 Q264 48 260 42"/>
+    <path d="M298 22 Q298 16 306 16 H324 Q330 16 330 22 V42 Q330 48 324 48 H306 Q298 48 298 42 Z"/>
+  </g>
+</svg>

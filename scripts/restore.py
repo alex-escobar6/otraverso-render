@@ -14,6 +14,9 @@ from app.config import BACKUP_DIR, Config  # noqa: E402
 
 
 def main() -> None:
+    if Config.DB_BACKEND == "postgres":
+        raise SystemExit("La restauración SQLite no aplica a PostgreSQL; use la migración con DATABASE_URL "
+                         "o una exportación del proveedor.")
     parser = argparse.ArgumentParser(description="Restaurar copia de OTRAVERSO")
     parser.add_argument("filename", help="Nombre del archivo dentro de data/backups")
     parser.add_argument("--confirm", action="store_true", help="Confirmar la restauración")

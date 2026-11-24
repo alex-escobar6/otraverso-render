@@ -1,0 +1,182 @@
+.play-game--gravity {
+  --gravity-cyan: #67e8f9;
+  --gravity-pink: #f472b6;
+  --gravity-violet: #a78bfa;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-viewport {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #171034 0%, #070614 48%, #03030a 100%);
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-viewport canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-panel {
+  z-index: 6;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-panel .universe-hud-row {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-panel .universe-hud-item strong {
+  color: var(--gravity-cyan);
+  font-size: 0.82rem;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-panel .universe-progress span {
+  background: linear-gradient(90deg, var(--gravity-cyan), var(--gravity-violet), var(--gravity-pink));
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 6;
+  width: min(760px, calc(100% - 32px));
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(103, 232, 249, 0.24);
+  border-radius: 6px;
+  background: rgba(5, 4, 18, 0.72);
+  color: rgba(220, 230, 255, 0.78);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-touch-controls {
+  position: absolute;
+  inset: auto 22px 72px;
+  z-index: 7;
+  display: none;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-stick {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  border: 1px solid rgba(103, 232, 249, 0.45);
+  border-radius: 50%;
+  background: rgba(8, 7, 24, 0.58);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-stick::before,
+.universe-stage[data-game-code="gravity"] .gravity-stick::after {
+  position: absolute;
+  content: '';
+  background: rgba(103, 232, 249, 0.18);
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-stick::before {
+  top: 50%;
+  left: 12%;
+  width: 76%;
+  height: 1px;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-stick::after {
+  top: 12%;
+  left: 50%;
+  width: 1px;
+  height: 76%;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-stick__knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--gravity-cyan);
+  border-radius: 50%;
+  background: rgba(103, 232, 249, 0.22);
+  box-shadow: 0 0 18px rgba(103, 232, 249, 0.4);
+  transform: translate(-50%, -50%);
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-touch-buttons {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-result-detail {
+  margin: 10px 0 0;
+  color: var(--gravity-cyan);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .universe-stage[data-game-code="gravity"] .gravity-touch-controls {
+    display: flex;
+  }
+
+  .universe-stage[data-game-code="gravity"] .gravity-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .universe-stage[data-game-code="gravity"] .gravity-panel .universe-hud-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .universe-stage[data-game-code="gravity"] .gravity-panel .universe-hud-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .universe-stage[data-game-code="gravity"] .gravity-panel .universe-hud-item span {
+    font-size: 0.55rem;
+  }
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-canvas--fallback {
+  background:
+    radial-gradient(circle at 70% 22%, rgba(103, 232, 249, 0.16), transparent 26%),
+    radial-gradient(circle at 24% 48%, rgba(167, 139, 250, 0.14), transparent 32%),
+    #06040f;
+}
+
+.universe-stage[data-game-code="gravity"] .gravity-graphics-status {
+  position: absolute;
+  top: 86px;
+  left: 50%;
+  z-index: 5;
+  padding: 5px 11px;
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  border-radius: 999px;
+  background: rgba(5, 4, 18, 0.78);
+  color: #a5f3fc;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .universe-stage[data-game-code="gravity"] .gravity-graphics-status {
+    top: 74px;
+    font-size: 0.54rem;
+  }
+}

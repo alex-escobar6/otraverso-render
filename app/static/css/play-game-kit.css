@@ -1,0 +1,72 @@
+[data-game-canvas] {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[data-game-start],
+[data-game-result],
+[data-game-paused] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+[data-game-start][hidden],
+[data-game-result][hidden],
+[data-game-paused][hidden] {
+  display: none !important;
+}
+
+[data-game-controls] {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+  z-index: 15;
+  pointer-events: none;
+}
+
+[data-game-controls] > * {
+  pointer-events: auto;
+}
+
+[data-game-hud] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  z-index: 15;
+  pointer-events: none;
+  font-family: inherit;
+}
+
+[data-game-hud] > * {
+  pointer-events: auto;
+}
+
+[data-game-host],
+[data-game-playfield] {
+  position: relative;
+  overflow: hidden;
+}

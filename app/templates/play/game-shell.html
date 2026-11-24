@@ -1,0 +1,51 @@
+<div class="universe-ui universe-game-ui universe-game-ui--kit play-game--$GAME_CODE" data-game-host data-game-code="$GAME_CODE">
+  <div class="universe-game-viewport" data-game-viewport>
+    <canvas class="universe-game-canvas" data-game-canvas data-play-runtime="$GAME_CODE" aria-hidden="true"></canvas>
+  </div>
+
+  <a class="universe-play-return" href="/play" data-warp data-play-back>← REGRESAR A PLAY</a>
+
+  <div class="universe-game-panel" aria-live="off">
+    <div class="universe-hud-row">
+      <div class="universe-hud-item"><span>Puntos</span><strong data-hud-score>0</strong></div>
+      <div class="universe-hud-item"><span>Tiempo</span><strong data-hud-time>0.0 s</strong></div>
+      <div class="universe-hud-item universe-hud-item--wide"><span>Estado</span><strong data-hud-extra>LISTO</strong></div>
+      <a class="universe-game-hub-link" href="/play" data-warp data-play-back>CATÁLOGO</a>
+    </div>
+  </div>
+
+  <p class="universe-game-label" data-game-controls>Ratón / toque para interactuar · P pausa · Esc volver al catálogo</p>
+
+  <div class="universe-game-start" data-game-start>
+    <div class="universe-result__card">
+      <p class="universe-eyebrow"><span></span> OTRAVERSO PLAY</p>
+      <h2>PORTAL ESTABLE</h2>
+      <p>El juego está listo. Pulsa iniciar cuando quieras cruzar.</p>
+      <div class="universe-result__actions">
+        <button class="universe-result-button" type="button" data-game-start-button>INICIAR</button>
+        <a class="universe-result-button" href="/play" data-warp data-play-back>VOLVER AL HUB</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="universe-paused" data-game-paused hidden>
+    <div class="universe-result__card"><h2>PAUSA</h2><p>Pulsa P para continuar.</p></div>
+  </div>
+
+  <div class="universe-result" data-game-result hidden role="dialog" aria-modal="true" aria-labelledby="resultado-titulo">
+    <div class="universe-result__card">
+      <h2 id="resultado-titulo" data-result-title>RESULTADO</h2>
+      <div class="universe-result__stats">
+        <div><span>Puntos</span><strong data-result-score>0</strong></div>
+        <div><span>Tiempo</span><strong data-result-time>0.0 s</strong></div>
+        <div><span>Récord</span><strong data-result-best>0</strong></div>
+      </div>
+      <p class="universe-result__detail" data-result-detail></p>
+      <div class="universe-result__actions">
+        <button class="universe-result-button" type="button" data-retry>REINTENTAR</button>
+        <button class="universe-result-button" type="button" data-circuit-menu>REGRESAR A PLAY</button>
+        <button class="universe-result-button" type="button" data-game-hub>HUB</button>
+      </div>
+    </div>
+  </div>
+</div>

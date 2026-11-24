@@ -1,0 +1,12 @@
+.play-game--fracture-temporal {
+  background: linear-gradient(180deg, #0c0822 0%, #04030c 100%);
+}
+.play-game--fracture-temporal [data-game-canvas] {
+  background: #04030c;
+}
+.play-game--fracture-temporal [data-game-start],
+.play-game--fracture-temporal [data-game-result],
+.play-game--fracture-temporal [data-game-paused] {
+  background: rgba(4, 3, 12, 0.78);
+  color: #eef2ff;
+}

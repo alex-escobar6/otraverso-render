@@ -1,0 +1,112 @@
+<section class="wi-room" data-wi-room data-reality-id="$REALITY_ID">
+  <header class="wi-room__top">
+    <div>
+      <a class="wi-back" href="/what-if/biblioteca">← BIBLIOTECA</a>
+      <p class="wi-eyebrow" data-wi-reality-code>WHAT IF</p>
+      <h1 data-wi-title>Cargando mundo…</h1>
+      <p data-wi-premise></p>
+    </div>
+    <div class="wi-room__tools">
+      <label>Línea temporal<select data-wi-timeline></select></label>
+      <a class="wi-btn wi-btn--ghost" data-wi-studio>ABRIR TALLER</a>
+      <a class="wi-btn wi-btn--ghost" href="/what-if">MULTIVERSO</a>
+    </div>
+  </header>
+
+  <div class="wi-room__telemetry">
+    <div class="wi-readout"><span>Modo activo</span><div class="wi-badges" data-wi-modes><span class="wi-badge">NORMAL</span></div></div>
+    <div class="wi-readout"><span>Estabilidad de línea</span><strong class="wi-stability" data-wi-stability>—</strong></div>
+    <div class="wi-progress" data-wi-progress>
+      <span class="wi-progress__label">BIBLIOTECA ESTABLE · SIN GENERACIÓN EN CURSO</span>
+      <span class="wi-progress__track"><span class="wi-progress__fill"></span></span>
+    </div>
+    <button class="wi-btn wi-btn--signal wi-btn--small" type="button" data-wi-surprise>SORPRÉNDEME</button>
+  </div>
+
+  <div class="wi-room__grid">
+    <aside class="wi-panel" data-wi-panel="left">
+      <div class="wi-tabs" data-wi-tabs-left>
+        <button type="button" class="is-active" data-tab="chapters">Capítulos</button>
+        <button type="button" data-tab="timelines">Líneas</button>
+      </div>
+      <div data-wi-tab-content="chapters" class="wi-explore-block">
+        <div class="wi-list" data-wi-chapters></div>
+        <h3 class="wi-explore__title">Argumento del mundo</h3>
+        <div class="wi-list" data-wi-blueprint-chapters></div>
+      </div>
+      <div class="wi-explore-block" data-wi-tab-content="timelines" hidden>
+        <div class="wi-list" data-wi-timelines></div>
+        <form class="wi-inline-form" data-wi-branch-form>
+          <input type="hidden" name="csrf" value="$CSRF">
+          <input name="name" placeholder="Nombre de la nueva línea" maxlength="120" required>
+          <input name="divergence" placeholder="Acontecimiento de divergencia" maxlength="400">
+          <button class="wi-btn wi-btn--small" type="submit">RAMIFICAR</button>
+        </form>
+        <div data-wi-compare></div>
+      </div>
+    </aside>
+
+    <main class="wi-stage">
+      <div class="wi-stage__head">
+        <span class="wi-eyebrow" data-wi-chapter-number></span>
+        <h2 data-wi-chapter-title></h2>
+        <p class="wi-date" data-wi-chapter-date></p>
+      </div>
+      <article class="wi-prose" data-wi-chapter-content><p>Preparando la historia…</p></article>
+      <div class="wi-stage__actions">
+        <button class="wi-btn wi-btn--primary" type="button" data-wi-continue>CONTINUAR HISTORIA</button>
+        <button class="wi-btn" type="button" data-wi-generate-image>GENERAR PORTADA</button>
+        <button class="wi-btn wi-btn--ghost" type="button" data-wi-versions>VERSIONES</button>
+      </div>
+      <section class="wi-detail" data-wi-detail hidden aria-live="polite">
+        <div class="wi-detail__head">
+          <span class="wi-eyebrow" data-wi-detail-kind></span>
+          <h3 data-wi-detail-title></h3>
+          <button class="wi-btn wi-btn--ghost wi-btn--small" type="button" data-wi-detail-close>CERRAR FICHA</button>
+        </div>
+        <div class="wi-detail__body" data-wi-detail-body></div>
+      </section>
+      <div class="wi-versions" data-wi-versions-panel hidden></div>
+
+      <form class="wi-intervention" data-wi-intervention-form>
+        <input type="hidden" name="csrf" value="$CSRF">
+        <label for="wi-intervention-text">Intervenir en la realidad</label>
+        <textarea id="wi-intervention-text" name="text" rows="3" maxlength="1200" required placeholder="Quiero que la protagonista descubra que su hermano trabaja para el enemigo"></textarea>
+        <div class="wi-actions">
+          <button class="wi-btn wi-btn--primary" type="submit">ANALIZAR INTERVENCIÓN</button>
+        </div>
+      </form>
+      <div class="wi-proposal" data-wi-intervention-proposal hidden></div>
+    </main>
+
+    <aside class="wi-panel" data-wi-panel="right">
+      <div class="wi-tabs wi-tabs--explore" data-wi-tabs-right>
+        <button type="button" class="is-active" data-tab="context">Actualidad</button>
+        <button type="button" data-tab="mundo">Mundo</button>
+        <button type="button" data-tab="historia">Historia</button>
+        <button type="button" data-tab="cronologia">Cronología</button>
+        <button type="button" data-tab="personajes">Personajes</button>
+        <button type="button" data-tab="lugares">Lugares</button>
+        <button type="button" data-tab="civilizaciones">Civilizaciones</button>
+        <button type="button" data-tab="misterios">Misterios</button>
+        <button type="button" data-tab="eventos">Acontecimientos</button>
+        <button type="button" data-tab="lineas">Líneas</button>
+        <button type="button" data-tab="memoria">Memoria</button>
+        <button type="button" data-tab="reglas">Reglas</button>
+      </div>
+      <div data-wi-right="context"><div class="wi-context-block"><h3>Situación actual</h3><div data-wi-current></div></div><div class="wi-context-block"><h3>Memoria de capítulos</h3><div data-wi-memory-chapter></div></div></div>
+      <div data-wi-right="mundo" hidden><div class="wi-list" data-wi-explore="mundo"></div></div>
+      <div data-wi-right="historia" hidden><div class="wi-list" data-wi-explore="historia"></div></div>
+      <div data-wi-right="cronologia" hidden><div class="wi-list" data-wi-explore="cronologia"></div></div>
+      <div data-wi-right="personajes" hidden><div class="wi-list" data-wi-characters></div></div>
+      <div data-wi-right="lugares" hidden><div class="wi-list" data-wi-locations></div><button class="wi-btn wi-btn--small" type="button" data-wi-generate-map>MAPA 2D</button></div>
+      <div data-wi-right="civilizaciones" hidden><div class="wi-list" data-wi-explore="civilizaciones"></div></div>
+      <div data-wi-right="misterios" hidden><div class="wi-list" data-wi-explore="misterios"></div></div>
+      <div data-wi-right="eventos" hidden><div class="wi-list" data-wi-events></div></div>
+      <div data-wi-right="lineas" hidden><div class="wi-list" data-wi-timeline-cards></div></div>
+      <div data-wi-right="memoria" hidden><div class="wi-list" data-wi-explore="memoria"></div><div class="wi-list" data-wi-memory-cards></div></div>
+      <div data-wi-right="reglas" hidden><div class="wi-list" data-wi-rules></div></div>
+    </aside>
+  </div>
+  <div class="wi-status" data-wi-status role="status" aria-live="polite"></div>
+</section>

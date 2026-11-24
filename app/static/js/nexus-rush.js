@@ -4,6 +4,7 @@
   var O = global.OTRAVERSO;
   if (!O) return;
 
+  var PLAY = O.PLAY || null;
   var doc = global.document;
   var CIRCUITS = [
     { name: 'NEXUS I · ARRANQUE', css: '#67e8f9', shade: '#22d3ee', limit: 95, speed: 250, length: 5200, obstacles: 7, pickups: 12, seed: 1.2, curve: 22 },
@@ -29,9 +30,24 @@
   var audioContext = null;
   var bound = false;
   var lastHud = 0;
+  var host = null;
+  var listeners = [];
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  function on(target, type, handler, options) {
+    target.addEventListener(type, handler, options);
+    listeners.push([target, type, handler, options]);
+  }
+
+  function offAll() {
+    listeners.forEach(function (entry) {
+      entry[0].removeEventListener(entry[1], entry[2], entry[3]);
+    });
+    listeners = [];
+    bound = false;
   }
 
   function rand(seed) {
@@ -123,6 +139,7 @@
       canvas = doc.createElement('canvas');
       canvas.className = 'universe-game-canvas';
       canvas.setAttribute('data-game-canvas', '');
+      canvas.setAttribute('data-play-runtime', 'nexus-rush');
       canvas.setAttribute('aria-hidden', 'true');
       root.querySelector('.universe-game-ui').appendChild(canvas);
     }
@@ -317,6 +334,22 @@
       hud('[data-result-time]', state.time.toFixed(1) + ' s');
       hud('[data-result-best]', record ? Math.round(record.score).toLocaleString('es-CO') : '—');
     }
+    if (host && typeof host.submitResult === 'function') {
+      host.submitResult({
+        game: 'nexus-rush',
+        version: '1.0.0',
+        circuit: state.index,
+        circuitName: circuit.name,
+        success: success,
+        score: Math.round(state.score),
+        durationMs: Math.round(state.time * 1000),
+        stats: {
+          pickups: state.pickups,
+          crashes: state.crashes,
+          turbo: Math.round(state.turbo)
+        }
+      });
+    }
     if (success) tone(784, 0.18, 'triangle', 0.1);
     else tone(120, 0.32, 'sawtooth', 0.08);
   }
@@ -331,13 +364,6 @@
     var countdown = root.querySelector('[data-game-countdown]');
     if (countdown) countdown.hidden = true;
 
-    if (keys.p || keys.P) {
-      paused = !paused;
-      keys.p = false;
-      keys.P = false;
-      var pausePanel = root.querySelector('[data-game-paused]');
-      if (pausePanel) pausePanel.hidden = !paused;
-    }
     if (paused) return;
 
     var boost = keys.boost || keys.Space || keys[' '];
@@ -370,10 +396,12 @@
       if (Math.abs(playerLane - entity.lane) > 0.5 || state.jump > 0.45) return;
       entity.done = true;
       if (entity.type === 'pickup') {
+        state.pickups += 1;
         state.score += 140;
         state.turbo = Math.min(100, state.turbo + 12);
         tone(880, 0.12, 'triangle', 0.08);
       } else {
+        state.crashes += 1;
         state.energy = Math.max(0, state.energy - 26);
         state.speed *= 0.62;
         state.score = Math.max(0, state.score - 80);
@@ -399,29 +427,29 @@
   function bindControls() {
     if (bound) return;
     bound = true;
-    doc.addEventListener('keydown', function (event) {
+    on(doc, 'keydown', function (event) {
       if (!running) return;
       keys[event.key] = true;
       keys[event.code] = true;
       unlockAudio();
       if (/^(Arrow|Space|Shift)/.test(event.code)) event.preventDefault();
-      if (event.key === 'r' || event.key === 'R') start(state.index);
-      if (event.key === 'Escape') {
-        stop();
-        O.goHub();
+      if (event.key === 'p' || event.key === 'P') {
+        if (paused) resume();
+        else pause();
       }
+      if (event.key === 'r' || event.key === 'R') restart();
+      if (event.key === 'Escape') O.goHub();
     });
-    doc.addEventListener('keyup', function (event) {
+    on(doc, 'keyup', function (event) {
       keys[event.key] = false;
       keys[event.code] = false;
     });
-    global.addEventListener('blur', function () { keys = {}; });
-    global.addEventListener('resize', resize);
-    doc.addEventListener('visibilitychange', function () {
+    on(global, 'blur', function () { keys = {}; });
+    on(global, 'resize', resize);
+    on(doc, 'visibilitychange', function () {
       if (!running) return;
-      paused = doc.hidden;
-      var panel = root.querySelector('[data-game-paused]');
-      if (panel) panel.hidden = !paused;
+      if (doc.hidden) pause();
+      else resume();
     });
     var mappings = [
       ['[data-touch-left]', 'left'], ['[data-touch-right]', 'right'],
@@ -431,7 +459,7 @@
       var node = root.querySelector(mapping[0]);
       if (!node) return;
       ['pointerdown', 'pointerup', 'pointercancel', 'pointerleave'].forEach(function (eventName) {
-        node.addEventListener(eventName, function (event) {
+        on(node, eventName, function (event) {
           event.preventDefault();
           touch[mapping[1]] = eventName === 'pointerdown';
           keys[mapping[1]] = touch[mapping[1]];
@@ -439,22 +467,14 @@
         });
       });
     });
-    var retry = root.querySelector('[data-retry]');
-    if (retry) retry.addEventListener('click', function () { start(state ? state.index : 0); });
-    var menu = root.querySelector('[data-circuit-menu]');
-    if (menu) menu.addEventListener('click', function () {
-      stop();
-      O.warpTo('/play', 'play');
-    });
-    var hub = root.querySelector('[data-game-hub]');
-    if (hub) hub.addEventListener('click', function () {
-      stop();
-      O.goHub();
-    });
   }
 
-  function start(index) {
+  function start(options) {
     if (!root) return;
+    var index = typeof options === 'number'
+      ? options
+      : (options && options.circuit != null ? options.circuit : 0);
+    index = clamp(index | 0, 0, CIRCUITS.length - 1);
     stop();
     bindControls();
     ensureCanvas();
@@ -470,6 +490,8 @@
       energy: 100,
       lane: 0,
       jump: 0,
+      pickups: 0,
+      crashes: 0,
       entities: entitiesFor(index),
       countdownEnd: global.performance.now() + 2600,
       last: 0,
@@ -509,15 +531,99 @@
     if (countdown) countdown.hidden = true;
   }
 
-  function init() {
-    root = O.root();
-    if (!root) root = doc.querySelector('[data-universe-root]');
-    if (!root) return;
+  function init(context) {
+    host = context || null;
+    root = O.root() || doc.querySelector('[data-universe-root]');
+    if (!root) return false;
     bindControls();
-    if (O.scene() === 'game') start(O.root().getAttribute('data-circuit') | 0);
+    return true;
   }
 
-  O.Game = { start: start, stop: stop, isRunning: function () { return running; } };
-  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
-  else init();
+  function mount(container) {
+    if (!container || !container.closest) return;
+    root = container.closest('[data-universe-root]') || root;
+  }
+
+  function pause() {
+    if (!running || paused) return;
+    paused = true;
+    keys = {};
+    touch = {};
+    var panel = root && root.querySelector('[data-game-paused]');
+    if (panel) panel.hidden = false;
+  }
+
+  function resume() {
+    if (!running || !paused || doc.hidden) return;
+    paused = false;
+    var panel = root && root.querySelector('[data-game-paused]');
+    if (panel) panel.hidden = true;
+    if (state) state.last = global.performance.now();
+  }
+
+  function restart() {
+    start(state ? state.index : 0);
+  }
+
+  function getState() {
+    if (!state) return null;
+    return {
+      circuit: state.index,
+      distance: state.distance,
+      time: state.time,
+      score: Math.round(state.score),
+      energy: state.energy,
+      turbo: state.turbo,
+      paused: paused,
+      finished: state.finished
+    };
+  }
+
+  function dispose() {
+    stop();
+    offAll();
+    if (audioContext && typeof audioContext.close === 'function') {
+      try { audioContext.close(); } catch (error) { audioContext = null; }
+    }
+    audioContext = null;
+    if (canvas) {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
+    canvas = null;
+    ctx = null;
+    state = null;
+    circuit = null;
+    stars = [];
+    skyline = [];
+    hudCache = {};
+    keys = {};
+    touch = {};
+    host = null;
+  }
+
+  var contract = {
+    id: 'nexus-rush',
+    init: init,
+    mount: mount,
+    start: start,
+    pause: pause,
+    resume: resume,
+    restart: restart,
+    getState: getState,
+    stop: stop,
+    dispose: dispose
+  };
+
+  if (PLAY) PLAY.register('nexus-rush', contract);
+
+  O.Game = {
+    start: start,
+    stop: stop,
+    pause: pause,
+    resume: resume,
+    restart: restart,
+    dispose: dispose,
+    isRunning: function () { return running; }
+  };
 })(window);

@@ -1,0 +1,12 @@
+.play-game--last-flash {
+  background: linear-gradient(180deg, #1a0024 0%, #05020b 100%);
+}
+.play-game--last-flash [data-game-canvas] {
+  background: #05020b;
+}
+.play-game--last-flash [data-game-start],
+.play-game--last-flash [data-game-result],
+.play-game--last-flash [data-game-paused] {
+  background: rgba(10, 2, 18, 0.74);
+  color: #ffeefe;
+}
