@@ -10,7 +10,7 @@ from app.config import Config
 
 
 NO_ID_TABLES = {
-    "role_permissions", "settings", "product_related", "play_profiles",
+    "app_meta", "role_permissions", "settings", "product_related", "play_profiles",
     "play_achievements", "play_collectibles",
 }
 
