@@ -1,0 +1,57 @@
+{
+  "path": "assets/dragon_organic/dragon.glb",
+  "name": "Organic Dragon",
+  "license": "Original work created for DRACONIA",
+  "source": "Blender 4.0.2 organic mesh",
+  "static": true,
+  "transform": {
+    "scale": 0.38,
+    "position": [0, 0.04, 0],
+    "rotation": [0, 0, 0]
+  },
+  "initialClip": "",
+  "fallbackClip": "",
+  "clips": {},
+  "clipSpeeds": {},
+  "eyeMaterial": "",
+  "shadow": {
+    "cast": true,
+    "receive": true,
+    "frustumCulled": false
+  },
+  "materials": {
+    "Scales_Pearl": {
+      "color": "#ffffff",
+      "roughness": 0.34,
+      "clearcoat": 0.55,
+      "clearcoatRoughness": 0.22
+    },
+    "Horn_Crystal": {
+      "color": "#ffffff",
+      "roughness": 0.2,
+      "clearcoat": 0.7
+    },
+    "Membrane_Violet": {
+      "color": "#ffffff",
+      "roughness": 0.45,
+      "opacity": 0.88,
+      "side": "DoubleSide"
+    },
+    "Claw_Pearl": {
+      "color": "#ffffff",
+      "roughness": 0.22
+    },
+    "Eye_Violet": {
+      "color": "#ffffff",
+      "roughness": 0.08
+    },
+    "Pupil_Dark": {
+      "color": "#ffffff",
+      "roughness": 0.12
+    },
+    "Nostril_Dark": {
+      "color": "#ffffff",
+      "roughness": 0.52
+    }
+  }
+}

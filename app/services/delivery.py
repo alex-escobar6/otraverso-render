@@ -31,6 +31,14 @@ def rates_for_zone(zone_id: int) -> list[sqlite3.Row]:
     return query("SELECT * FROM zone_rates WHERE zone_id=? AND active=1 ORDER BY modality", (zone_id,))
 
 
+def rate_price_cents(zone_id: int | None, modality: str) -> int:
+    if not zone_id:
+        return 0
+    rows = query("SELECT price_cents FROM zone_rates WHERE zone_id=? AND modality=? AND active=1 LIMIT 1",
+                 (zone_id, modality))
+    return int(rows[0]["price_cents"] or 0) if rows else 0
+
+
 def human_duration(hours: int) -> str:
     if hours < 24:
         return f"hasta {hours} horas"

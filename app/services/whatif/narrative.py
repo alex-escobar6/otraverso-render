@@ -108,46 +108,137 @@ APOCALYPSE_STAGES = (
     ("secuelas", "La supervivencia depende de aceptar un mundo que no volverá a ser el mismo"),
 )
 
-BEATS = ("ambientacion", "dialogo", "conflicto", "descubrimiento", "consecuencia", "giro")
+NARRATIVE_PROFILES = {
+    "historico": {
+        "objects": ("un rollo de pergamino", "una moneda desgastada", "un sello de barro", "una lámpara de aceite", "un pergamino con el borde quemado", "una red de pesca enrollada"),
+        "textures": ("el polvo del camino se levanta", "el aire caliente del mercado apenas se mueve", "la sombra de los pórticos se acorta", "el rumor de una lengua antigua cruza el mercado", "el aire espeso del mercado al mediodía se vuelve más denso", "el polvo se adhiere a tus sandalias"),
+        "voices": ("No deberías saber eso", "La fecha no coincide", "Si lo dices en voz alta, ya no podremos negarlo", "No mires esa fecha", "Aquí nadie escribe dos veces el mismo nombre"),
+        "discoveries": ("una fecha escrita al dorso", "un nombre repetido en dos listas distintas", "una huella bajo el polvo", "un sello que pertenecía a otro hombre", "un nombre bajo una capa de cera", "una marca que coincide con el sello del guardia"),
+    },
+    "dinosaurios": {
+        "objects": ("un hueso todavía tibio", "una huella de tres garras", "una hoja fósil arrancada", "un diente incrustado en la corteza", "una pluma fósil", "un trozo de cáscara con vetas"),
+        "textures": ("el vapor entre los helechos sube", "el suelo húmedo del valle cede bajo tus pasos", "el eco de un paso gigante se apaga", "la luz filtrada por copas enormes cambia de lugar", "el aire caliente sobre el barro se mueve", "el rumor de ramas rotas se acerca"),
+        "voices": ("Esa huella es reciente", "No hay animal así en los libros", "Si viene hacia aquí, no corras", "No hagas ruido", "Ese sendero no estaba ayer"),
+        "discoveries": ("un fósil rodeado de marcas nuevas", "un nido con cáscaras recientes", "un sendero que termina en una ciudad oculta", "un colmillo más largo que tu mano", "un huevo abierto con la cáscara todavía húmeda", "una huella que se cruza con la tuya"),
+    },
+    "suenos": {
+        "objects": ("un cuaderno de tapas azules", "una cinta de papel", "un reloj detenido", "una carta sin remitente", "un diario con la última página en blanco", "una aguja clavada en un mapa"),
+        "textures": ("la luz azul de la madrugada se filtra", "el silencio de una habitación ajena se rompe", "el zumbido de una lámpara se vuelve más nítido", "la niebla pegada a los cristales empieza a moverse", "el frío de la madrugada sube por tus dedos", "la luz parpadea sin motivo"),
+        "voices": ("Soñé lo mismo hace una hora", "Esa fecha todavía no llega", "No lo escribas: puede que ya esté escrito", "Yo también lo vi", "No digas la fecha en voz alta"),
+        "discoveries": ("la misma frase en dos cuadernos distintos", "una dirección que ninguno conocía", "una fecha imposible repetida dos veces", "un nombre borrado apenas", "la misma mancha de tinta en dos páginas", "una frase que termina antes de que la leas"),
+    },
+    "senal": {
+        "objects": ("una antena inclinada", "una pantalla con líneas erraticas", "una cápsula sellada", "un cuaderno de traducciones", "una bobina de cable pelado", "una lámina con caracteres desconocidos"),
+        "textures": ("el zumbido de la estación llena el aire", "la luz roja de los instrumentos parpadea", "el frío metálico de la sala sube por tus manos", "un cielo sin ruido queda fuera", "el aire estático precede a cada transmisión", "la luz de la consola cambia de ritmo"),
+        "voices": ("No es un saludo", "La respuesta viene de dentro", "Todo lo que traducimos cambia el mensaje", "Repite la frase exacta", "No traduzcas eso todavía"),
+        "discoveries": ("una frase repetida bajo el ruido", "un mapa con dos nombres para el mismo lugar", "una coordenada que ya estaba en el archivo", "una grabación anterior al primer contacto", "un patrón que se repite cada nueve segundos", "una firma que ya estaba en el primer archivo"),
+    },
+    "futuro": {
+        "objects": ("una pasarela luminosa", "un vehículo silencioso", "una torre de cristal", "una pulsera con datos antiguos", "una tarjeta sin nombre", "un trozo de cristal con una fecha grabada"),
+        "textures": ("el zumbido de la ciudad se filtra", "la luz artificial de una avenida limpia se refleja", "el aire filtrado de la estación se renueva", "las sombras perfectas de los edificios se alinean", "el silencio de los corredores climatizados se rompe", "la luz de las paredes cambia al mirarte"),
+        "voices": ("Aquí nadie camina sin permiso", "Ese nombre no existe en el sistema", "La ciudad recuerda por ti", "Tu acceso está en revisión", "La ciudad no confirma ese nombre"),
+        "discoveries": ("una puerta sin permiso visible", "un nombre borrado de la red", "una calle que no aparece en el mapa", "un mensaje escrito con letras antiguas", "una puerta que responde a tu voz", "una lista con dos versiones de tu llegada"),
+    },
+    "apocalipsis": {
+        "objects": ("una cantina medio llena", "un mapa roto", "una radio con pilas prestadas", "una llave oxidada", "un bidón abierto", "una foto con el borde chamuscado"),
+        "textures": ("el humo bajo el cielo se espesa", "el frío de una casa vacía se instala", "el crujido de una vía abandonada se repite", "el olor a tierra mojada y ceniza se queda", "el viento entra por las ventanas rotas", "la ceniza se posa sobre todo"),
+        "voices": ("Nos queda menos de un día", "No abras esa puerta", "Si vuelves, vuelve con agua", "No compartas la ruta", "Hay suficiente para dos, no para tres"),
+        "discoveries": ("una ruta que aún no está cortada", "huellas recientes junto a la vía", "una reserva escondida bajo el suelo", "una señal que alguien dejó encendida", "una marca nueva en la puerta", "una botella escondida bajo una tabla"),
+    },
+    "fantasia": {
+        "objects": ("una llave de hueso", "un librito encuadernado en cuero", "una piedra que cambia de color", "una copa sin fondo", "un hilo rojo atado a la muñeca", "un frasco con polvo dorado"),
+        "textures": ("la luz imposible de una galería parpadea", "el aire cargado de incienso se vuelve denso", "el bosque murmura cerca", "la alfombra parece respirar", "la bruma se abre sin ruido", "el aire huele a lluvia antigua"),
+        "voices": ("Ese nombre no debe pronunciarse", "La puerta solo abre para quien duda", "Lo que buscas ya te encontró", "No pronuncies mi nombre aquí", "La puerta recuerda tu voz"),
+        "discoveries": ("un nombre borrado de un libro", "una runa repetida en la madera", "una sombra que se mueve sola", "una moneda acuñada mañana", "una inicial que cambia al parpadear", "un camino que no estaba antes"),
+    },
+    "aventura": {
+        "objects": ("un mapa doblado", "una brújula rara", "una carta con manchas", "un objeto que no debería estar allí", "una navaja con la empuñadura gastada", "un sobre sellado con cera roja"),
+        "textures": ("el viento entra por la abertura", "la luz oblicua de la tarde se desplaza", "el suelo cruje bajo tus pasos", "un ruido detrás de la pared vuelve a empezar", "el polvo se asienta en el silencio", "la tarde se inclina sobre el umbral"),
+        "voices": ("No era eso lo que esperaba", "Mira la fecha", "Si avanzamos, ya no habrá vuelta atrás", "No sigas derecho", "Esa fecha no debería estar ahí"),
+        "discoveries": ("una marca que coincide con el mapa", "un objeto imposible en ese lugar", "un nombre escrito en el margen", "una salida que nadie había visto", "una marca bajo la alfombra", "una dirección escrita a lápiz"),
+    },
+}
 
-SEQUENCE_CLUES = (
-    "El registro {sequence} cerraba esta parte de la escena.",
-    "La secuencia {sequence} dejó constancia de lo que todavía podía cambiar.",
-    "En el fragmento {sequence}, la explicación parecía suficiente hasta el siguiente gesto.",
-    "Ese instante, anotado como {sequence}, explicaba por qué la calma era provisional.",
+PROFILE_KEYWORDS = (
+    ("historico", ("judea", "jesus", "jesús", "romano", "imperio", "año 30", "siglo", "d. c.", "dc")),
+    ("dinosaurios", ("dinosaurio", "dinosaur", "extincion", "extinción", "fosil", "fósil")),
+    ("suenos", ("sueño", "sueños", "soñar", "dormido")),
+    ("senal", ("señal", "extraterrestre", "alien", "marte", "inteligente", "contacto")),
+    ("futuro", ("futur", "civilizacion futurista", "civilización futurista", "ciudad futurista", "tecnologia", "tecnología")),
+    ("apocalipsis", ("apocalip", "supervivencia", "ultimo amanecer", "último amanecer")),
+    ("fantasia", ("fantasia", "fantasía", "magia", "hechizo", "dragon", "dragón", "reino")),
 )
 
-BEAT_OPENERS = {
-    "ambientacion": (
-        "El lugar todavía conservaba la forma de los días normales",
-        "La luz llegaba con la lentitud de quien no quiere anunciar nada",
-        "Los sonidos de siempre se habían vuelto más cuidadosos",
-    ),
-    "dialogo": (
-        "Nadie quiso decirlo primero",
-        "La conversación empezó con una pregunta innecesaria",
-        "Las palabras pesaban más que el silencio que las rodeaba",
-    ),
-    "conflicto": (
-        "La decisión se impuso antes de que alguien la aceptara",
-        "Dos versiones de los hechos chocaron en la misma frase",
-        "Cada intento de avanzar cerraba una salida",
-    ),
-    "descubrimiento": (
-        "La explicación apareció donde nadie la había buscado",
-        "Una huella mínima ordenó todas las piezas",
-        "Lo evidente resultó ser la parte más engañosa",
-    ),
-    "consecuencia": (
-        "Después de eso, nada pudo continuar como antes",
-        "La primera consecuencia fue silenciosa y la segunda imposible de ocultar",
-        "El costo se pagó en un detalle que nadie había protegido",
-    ),
-    "giro": (
-        "Entonces la historia se miró desde el otro lado",
-        "La última frase cambió el sentido de todo lo anterior",
-        "Alguien comprendió que el final ya había comenzado",
-    ),
+OPENING_IMAGES = (
+    "Imagina que despiertas en {place}. {scene}",
+    "Todo comenzó cuando entraste en {place}. {scene}",
+    "En {place}, lo inesperado ocurrió sin anuncio. {scene}",
+    "Al principio creíste que era una ilusión. {scene}",
+)
+
+ARRIVAL_TEMPLATES = (
+    "Llegas a {place} mientras {texture}. {other} ya está allí, con {obj} entre las manos.",
+    "En {place}, oyes primero un paso y después una voz. Mientras {texture}, {other} sostiene {obj}.",
+    "No elegiste {place}. El camino termina allí; mientras {texture}, {other} espera junto a {obj}.",
+)
+
+DETAIL_TEMPLATES = (
+    "Acercas {obj} a la luz. Hay {discovery}, y ese detalle cambia el sentido de lo que acaba de ocurrir.",
+    "{other} señala {obj} sin decir nada. Mientras {texture}, ves {discovery} y entiendes que alguien llegó antes.",
+    "No es {obj} lo que te inquieta, sino {discovery}. Incluso mientras {texture}, el silencio parece deliberado.",
+)
+
+DIALOGUE_TEMPLATES = (
+    "«{voice}», dice {other}. Respondes con otra pregunta, porque la primera respuesta habría revelado demasiado.",
+    "«{voice}», murmura {other}. Mira {obj} y tarda en contestar; mientras {texture}, cada pausa pesa.",
+    "{other} pregunta: «{voice}». No quieres mentir, pero tampoco das la explicación completa.",
+)
+
+DISCOVERY_TEMPLATES = (
+    "Entonces ves {discovery}. Está junto a {obj}, donde nadie habría pensado buscar.",
+    "La pista está en {discovery}. {other} la sigue con la mirada y comprende antes que tú lo que significa.",
+    "Apartas {obj} y descubres {discovery}. No es casualidad: alguien dejó esa marca para ser vista.",
+)
+
+REACTION_TEMPLATES = (
+    "{other} retrocede un paso. Ha reconocido {discovery}, pero no quiere admitirlo delante de ti.",
+    "Sientes que la escena cambia de dirección. Todo sigue igual a tu alrededor, aunque nada volverá a ser igual.",
+    "Durante un instante nadie habla. Después {other} aprieta {obj} y te mira como quien decide confiar.",
+)
+
+CHOICE_TEMPLATES = (
+    "Podías marcharte o quedarte. Te quedas, porque {discovery} todavía no tiene explicación y alguien debe comprobarlo.",
+    "Hay una salida, pero deja la pregunta pendiente. Eliges el camino más difícil: quedarte junto a {other}.",
+    "{other} espera una orden. No la das; tomas {obj} y señalas {discovery} como única respuesta posible.",
+)
+
+AFTERMATH_TEMPLATES = (
+    "Cuando el ruido se apaga, {place} parece el mismo, pero ya sabes dónde mirar.",
+    "La decisión deja una huella pequeña y visible: {discovery}. {other} la ve y no dice nada.",
+    "Guardas {obj} antes de continuar. Es una prueba, una advertencia y una razón para no volver atrás.",
+)
+
+BRIDGE_TEMPLATES = (
+    "Todavía piensas en lo ocurrido al volver a {place}: {bridge} No es un recuerdo cómodo, porque explica por qué {other} mira {obj} con tanta cautela.",
+    "Antes de dar un paso, vuelves a {place} con aquello en la mente: {bridge} La escena ya no se parece a la que encontraste al llegar.",
+    "El regreso a {place} no borra lo que acaba de pasar: {bridge} {other} también lo ha notado y observa {obj} como si esperara una señal.",
+)
+
+DIRECTION_TEMPLATES = (
+    "Haces algo que nadie había previsto: {direction} {other} se detiene a medio gesto; incluso mientras {texture}, el aire cambia.",
+    "Decides actuar antes de que alguien te lo pida: {direction} {other} baja la mirada hacia {obj} y vuelve a mirarte.",
+    "Tu respuesta rompe el silencio: {direction} {other} no sabe si debe seguirte o advertirte.",
+)
+
+CHAPTER_TITLES = {
+    "historico": ("La fecha en el camino", "Lo que dijo {other}", "El sello y la fecha", "Una marca bajo el polvo"),
+    "dinosaurios": ("La huella reciente", "El valle que no calla", "Lo que dejó el fósil", "La sombra entre los helechos"),
+    "suenos": ("La fecha compartida", "Dos versiones del mismo sueño", "La frase repetida", "El cuaderno ajeno"),
+    "senal": ("La pregunta marciana", "Bajo la luz roja", "Lo que oculta la antena", "Una frase bajo el ruido"),
+    "futuro": ("El nombre que falta", "La ciudad que recuerda", "La puerta sin permiso", "Dos versiones de tu llegada"),
+    "apocalipsis": ("La ruta que queda", "Cuando el humo baja", "Lo que guarda la radio", "El refugio improbable"),
+    "fantasia": ("La puerta que duda", "El nombre borrado", "La moneda del mañana", "Lo que susurra la galería"),
+    "aventura": ("La marca del mapa", "El sobre sellado", "La salida oculta", "Lo que no debería estar allí"),
 }
 
 
@@ -491,13 +582,16 @@ def build_blueprint(payload: Any = None) -> dict:
 def chapter_plan(config: Any = None) -> dict:
     normalized = normalize_narrative_config(config)
     words_by_length = {
-        item["code"]: _int(_setting(item["setting"], str(item["words"])), int(item["words"]), 300, 20000)
+        item["code"]: _int(
+            _setting(item["setting"], str(item["words"])), int(item["words"]),
+            80 if item["code"] == "escena" else 300, 20000,
+        )
         for item in options.CHAPTER_LENGTHS
     }
-    max_words = _int(_setting("max_chapter_words", "6000"), 6000, 300, 20000)
-    total_words = min(max_words, words_by_length.get(normalized["chapter_length"], words_by_length["normal"]))
-    blocks = _int(_setting("generation_blocks", "3"), 3, 1, 8)
-    target_words = max(120, total_words // blocks)
+    max_words = _int(_setting("max_chapter_words", "6000"), 6000, 80, 20000)
+    total_words = min(max_words, words_by_length.get(normalized["chapter_length"], words_by_length["escena"]))
+    blocks = 1 if normalized["chapter_length"] == "escena" else _int(_setting("generation_blocks", "3"), 3, 1, 8)
+    target_words = max(80 if blocks == 1 else 120, total_words // blocks)
     return {
         "chapter_length": normalized["chapter_length"],
         "blocks": blocks,
@@ -679,47 +773,139 @@ def _context_text(context: dict, key: str, limit: int, fallback: str) -> str:
     return value or fallback
 
 
-def _sentence(rng: Any, beat: str, character: str, place: str, rule: str, premise: str) -> str:
-    opener = rng.choice(BEAT_OPENERS[beat])
-    details = {
-        "ambientacion": f" en {place}, donde {rule} y cada objeto parecía esperar una explicación",
-        "dialogo": f" cuando {character} preguntó qué se consideraría una respuesta honesta",
-        "conflicto": f" porque {character} entendió que la premisa —{premise}— no admitía una solución cómoda",
-        "descubrimiento": f": una evidencia mínima demostraba que la versión aceptada estaba incompleta",
-        "consecuencia": f" y la decisión dejó una huella que nadie podría disimular",
-        "giro": f" y hasta la memoria de {character} quedó abierta a revisión",
-    }
-    return opener + details[beat] + "."
+def _lower_first(text: str) -> str:
+    text = str(text or "").strip()
+    return text[:1].lower() + text[1:] if text else text
 
 
-def _extra_sentence(rng: Any, beat: str, character: str, place: str) -> str:
-    pool = {
-        "ambientacion": (
-            f"Nadie había registrado el cambio en {place} hasta esa mañana.",
-            f"El aire de {place} tenía una densidad que invitaba a hablar en voz baja.",
-        ),
-        "dialogo": (
-            f"«No hace falta que lo digas», respondió {character}, «ya se nota en todo».",
-            f"La respuesta llegó tarde, pero bastó para cambiar el tono de la conversación.",
-        ),
-        "conflicto": (
-            f"Avanzar parecía tan peligroso como quedarse.",
-            f"Cada alternativa exigía pagar un precio distinto.",
-        ),
-        "descubrimiento": (
-            "Lo más inquietante no era el hallazgo, sino que alguien lo esperaba.",
-            "La prueba explicaba los hechos y añadía una pregunta nueva.",
-        ),
-        "consecuencia": (
-            "A partir de ese instante, la memoria de lo ocurrido dejó de ser neutral.",
-            "La consecuencia se instaló en los gestos cotidianos antes de tener nombre.",
-        ),
-        "giro": (
-            "La escena se repitió en la mente de quienes la vivieron, pero con otro final.",
-            "Comprenderlo no sirvió para evitarlo; solo para reconocerlo más tarde.",
-        ),
-    }
-    return rng.choice(pool[beat])
+def _ended(text: str) -> str:
+    text = str(text or "").strip()
+    if text and text[-1] not in ".!?…":
+        return text + "."
+    return text
+
+
+def _public(value: Any, limit: int = 900) -> str:
+    return options.clean_narrative(value, limit).strip()
+
+
+def _unique_choice(rng: Any, pool: tuple[str, ...], used: set[str]) -> str:
+    available = [item for item in pool if item not in used]
+    choice = rng.choice(available or list(pool))
+    used.add(choice)
+    return choice
+
+
+def _profile_key(context: dict) -> str:
+    premise = _public(context.get("premise"), 600).lower()
+    reality = context.get("reality") if isinstance(context.get("reality"), dict) else {}
+    genre = str(reality.get("genre") or "").lower()
+    modes = " ".join(str(item).lower() for item in _as_list_safe(context.get("modes")))
+    haystack = " ".join((premise, genre, modes))
+    for key, keywords in PROFILE_KEYWORDS:
+        if any(word in haystack for word in keywords):
+            return key
+    if "ciencia" in haystack or "espacio" in haystack or "orbita" in haystack:
+        return "senal"
+    if "fant" in haystack or "magia" in haystack:
+        return "fantasia"
+    return "aventura"
+
+
+def _as_list_safe(value: Any) -> list:
+    return list(value) if isinstance(value, (list, tuple)) else []
+
+
+def _named(context: dict, key: str, fallback: str, limit: int = 3) -> list[str]:
+    rows = [row for row in _as_list_safe(context.get(key)) if isinstance(row, dict)]
+    names = []
+    for row in rows:
+        name = _public(row.get("name") or row.get("title"), 100)
+        if name and name not in names:
+            names.append(name)
+        if len(names) >= limit:
+            break
+    return names or [fallback]
+
+
+def _profile_facts(context: dict, profile: dict, actor: str, other: str, place: str) -> list[str]:
+    facts: list[str] = []
+    for row in _as_list_safe(context.get("characters"))[:4]:
+        if not isinstance(row, dict):
+            continue
+        name = _public(row.get("name"), 80)
+        if not name:
+            continue
+        detail = _public(row.get("identity") or row.get("personality") or row.get("motivations"), 140)
+        if detail and name not in " ".join(facts):
+            facts.append(f"{name} es {_lower_first(detail)}.")
+        if len(facts) >= 2:
+            break
+    for row in _as_list_safe(context.get("locations"))[:3]:
+        if not isinstance(row, dict):
+            continue
+        name = _public(row.get("name"), 80)
+        detail = _public(row.get("description") or row.get("kind"), 140)
+        if name and detail:
+            facts.append(f"{name}: {_lower_first(detail)}")
+        if len(facts) >= 3:
+            break
+    for rule in _as_list_safe(context.get("rules"))[:2]:
+        clean = _public(rule, 160)
+        if clean and clean not in facts:
+            facts.append(clean[0].upper() + clean[1:])
+        if len(facts) >= 4:
+            break
+    for row in _as_list_safe(context.get("events"))[:2]:
+        if not isinstance(row, dict):
+            continue
+        detail = _public(row.get("description") or row.get("title"), 150)
+        if detail:
+            facts.append(detail[0].upper() + detail[1:])
+        if len(facts) >= 5:
+            break
+    if len(facts) < 2:
+        facts.append(f"{actor} y {other} están en {place}, frente a {profile['objects'][0]}.")
+        facts.append(f"Lo que ocurra aquí dejará una huella en {profile['discoveries'][0]}.")
+    return facts[:5]
+
+
+def _date_label(context: dict, premise: str, number: int) -> str:
+    match = re.search(r"\b(año\s+\d+\s*d\.\s*C\.?[^.]{0,40})", premise, flags=re.IGNORECASE)
+    if match:
+        return options.clean_text(match.group(1), 80).strip(" ,")
+    lower = premise.lower()
+    if "futur" in lower:
+        return "La ciudad, antes del amanecer"
+    if "dinosaurio" in lower or "dinosaur" in lower:
+        return "La era que no terminó"
+    if "sueño" in lower or "soñar" in lower:
+        return "La madrugada compartida"
+    if "señal" in lower or "extraterrestre" in lower:
+        return "El primer contacto"
+    if number == 1:
+        return "El instante de llegada"
+    return "Poco después"
+
+
+def _possibilities(context: dict, actor: str, other: str, place: str, profile: dict) -> list[tuple[str, str]]:
+    obj = profile["objects"][0]
+    discovery = profile["discoveries"][0]
+    rows = [
+        ("Hablar con " + other, f"Preguntar qué sabe sobre {discovery} y por qué no lo dijo antes."),
+        ("Examinar " + obj, f"Buscar una marca concreta que explique lo ocurrido en {place}."),
+        ("Seguir el rastro", f"Volver al lugar donde apareció {discovery} antes de que desaparezca."),
+        ("Cambiar el rumbo", "Hacer una acción libre y comprobar qué cambia después."),
+    ]
+    modes = " ".join(str(item).lower() for item in _as_list_safe(context.get("modes")))
+    if "apocalip" in modes:
+        rows.insert(1, ("Buscar refugio", "Comprobar qué queda de agua, luz y tiempo antes de continuar."))
+    return rows[:5]
+
+
+def _paragraph(templates: tuple[str, ...], used: set[str], rng: Any, values: dict) -> str:
+    template = _unique_choice(rng, templates, used)
+    return _public(template.format(**values), 3000)
 
 
 def local_chapter_block(payload: Any = None) -> dict:
@@ -732,70 +918,124 @@ def local_chapter_block(payload: Any = None) -> dict:
     number = max(1, _int(data.get("number") or context.get("chapter_number"), 1, 1, 10000))
     index = max(1, _int(data.get("index"), 1, 1, 100))
     target_words = _int(data.get("target_words"), plan["target_words"], 120, 3000)
+    budget = min(target_words, 520)
+    minimum_paragraphs = 2 if config["chapter_length"] == "escena" else 4
     rng = _rng(data, f"chapter:{number}:{index}")
-    characters = [item for item in context.get("characters", []) if isinstance(item, dict)]
-    locations = [item for item in context.get("locations", []) if isinstance(item, dict)]
-    rules = [str(item) for item in context.get("rules", []) if str(item).strip()]
-    character = str(characters[0].get("name") or "quien observa") if characters else "quien observa"
-    place = str(locations[0].get("name") or "el lugar de los hechos") if locations else "el lugar de los hechos"
-    rule = rules[0] if rules else "la premisa elegida sigue siendo cierta"
-    premise = _context_text(context, "premise", 300, "la premisa que dio origen a esta realidad")
-    previous = _context_text(context, "previous_summary", 400, "Nadie había puesto en palabras lo que estaba cambiando")
-    last_event = _context_text(context, "last_event", 400, "")
-    direction = options.clean_text(data.get("direction"), 400)
+    profile_key = _profile_key(context)
+    profile = NARRATIVE_PROFILES[profile_key]
+    names = _named(context, "characters", "quien observa", 4)
+    places = _named(context, "locations", "el lugar donde todo empieza", 4)
+    subject = names[0]
+    actor = "tú"
+    other = names[1] if len(names) > 1 else (names[0] if names else "un desconocido")
+    place = places[0]
+    premise = _public(context.get("premise"), 600) or "la premisa que dio origen a esta realidad"
+    first_scene = _public(context.get("first_scene"), 500)
+    previous = _public(context.get("previous_summary"), 500)
+    last_event = _public(context.get("last_event"), 500)
+    direction = _public(data.get("direction"), 500)
+    date = _date_label(context, premise, number)
     forced = forced_event(config, number)
     used_raw = data.get("used_paragraphs")
     seen_paragraphs = (
         {_paragraph_key(item) for item in used_raw if isinstance(item, str)}
         if isinstance(used_raw, (list, tuple)) else set()
     )
-    paragraphs = []
-    words = 0
-    while words < target_words or len(paragraphs) < 6:
-        beat = BEATS[len(paragraphs) % len(BEATS)]
-        paragraph = _sentence(rng, beat, character, place, rule, premise)
-        paragraph += " " + _extra_sentence(rng, beat, character, place)
-        if len(paragraphs) == 0:
-            paragraph += f" Antes de esto, {previous.lower()}."
-        if last_event and len(paragraphs) == 2:
-            paragraph += f" El antecedente inmediato fue que {last_event.lower()}."
-        if direction and len(paragraphs) == 3:
-            paragraph += f" La intervención reciente obligaba a considerar esto: {direction.lower()}."
-        if forced and beat in {"descubrimiento", "consecuencia"}:
-            paragraph += f" {forced['description']}."
-        if config["crazy"] and beat in {"giro", "dialogo"}:
-            paragraph += (
-                " La explicación era absurda, pero funcionaba dentro de este mundo: "
-                f"se aceptó que {place} obedeciera una lógica distinta porque nadie encontró mejor respuesta."
-            )
-        if config["unlimited"] and beat in {"giro", "descubrimiento"}:
-            paragraph += (
-                f" Sin límites narrativos, la escena amplió la causa hasta {premise} sin perder la consecuencia "
-                f"concreta en {place}."
-            )
-        sequence = f"{number}.{index}.{len(paragraphs) + 1}"
-        paragraph += " " + rng.choice(SEQUENCE_CLUES).format(sequence=sequence)
-        key = _paragraph_key(paragraph)
-        if key in seen_paragraphs:
-            continue
-        seen_paragraphs.add(key)
-        paragraphs.append(paragraph)
-        words = sum(len(item.split()) for item in paragraphs)
-        if len(paragraphs) > target_words:
+    used_phrases: set[str] = set()
+    obj = _unique_choice(rng, profile["objects"], used_phrases)
+    texture = _unique_choice(rng, profile["textures"], used_phrases)
+    voice = _unique_choice(rng, profile["voices"], used_phrases)
+    discovery = _unique_choice(rng, profile["discoveries"], used_phrases)
+    scene_line = _ended(first_scene) or f"Algo en {place} acaba de dejar de encajar con lo que sabías."
+    values = {
+        "actor": actor, "subject": subject, "other": other, "place": place,
+        "obj": obj, "texture": texture, "voice": voice, "discovery": discovery,
+        "scene": scene_line,
+    }
+    title_pool = CHAPTER_TITLES[profile_key]
+    chapter_title = _public(title_pool[(number - 1) % len(title_pool)].format(**values), 120)
+    sections: list[str] = []
+    if number == 1 and index == 1:
+        opening = rng.choice(OPENING_IMAGES).format(place=place, scene=scene_line)
+        arrival = _paragraph(ARRIVAL_TEMPLATES, used_phrases, rng, values)
+        sections.extend((opening, "", "# Tu llegada", arrival))
+        sections.extend(("", "# Lo que debes saber"))
+        sections.extend("- " + fact for fact in _profile_facts(context, profile, subject, other, place))
+        sections.extend(("", "# Posibilidades de esta realidad"))
+        for title, detail in _possibilities(context, actor, other, place, profile):
+            sections.append(f"- **{title}** — {_lower_first(detail)}")
+        sections.extend((
+            "", "# Comienza la simulación",
+            "Elige una posibilidad o escribe tu propia acción. Si quieres definir tu papel, basta con tres detalles: "
+            "de dónde vienes, qué sabes y qué no quieres perder.",
+        ))
+    paragraphs: list[str] = []
+    if number > 1 and (previous or last_event):
+        bridge = _ended(_public(previous, 500)) if previous else "Lo que acabas de vivir todavía no tiene una explicación clara."
+        paragraph = _paragraph(
+            BRIDGE_TEMPLATES, used_phrases, rng,
+            {"place": place, "other": other, "obj": obj, "bridge": bridge},
+        )
+        if _paragraph_key(paragraph) not in seen_paragraphs:
+            seen_paragraphs.add(_paragraph_key(paragraph))
+            paragraphs.append(paragraph)
+    if direction and not (number == 1 and index == 1 and first_scene):
+        paragraph_values = dict(values)
+        paragraph_values.update({
+            "obj": _unique_choice(rng, profile["objects"], used_phrases),
+            "texture": _unique_choice(rng, profile["textures"], used_phrases),
+            "direction": _lower_first(_ended(direction)),
+        })
+        paragraph = _paragraph(DIRECTION_TEMPLATES, used_phrases, rng, paragraph_values)
+        if _paragraph_key(paragraph) not in seen_paragraphs:
+            seen_paragraphs.add(_paragraph_key(paragraph))
+            paragraphs.append(paragraph)
+    phases = (
+        DETAIL_TEMPLATES, DIALOGUE_TEMPLATES, DISCOVERY_TEMPLATES,
+        REACTION_TEMPLATES, CHOICE_TEMPLATES, AFTERMATH_TEMPLATES,
+    )
+    words = sum(len(item.split()) for item in sections)
+    for _ in range(28):
+        if words >= budget and len(paragraphs) >= minimum_paragraphs:
             break
-    block_text = compose_chapter(paragraphs)
-    summary = options.clean_text(
-        f"{character} descubre una consecuencia imprevista en {place}: {paragraphs[-1]}", 500,
+        for templates in phases:
+            if words >= budget and len(paragraphs) >= minimum_paragraphs:
+                break
+            paragraph_values = dict(values)
+            paragraph_values.update({
+                "obj": _unique_choice(rng, profile["objects"], used_phrases),
+                "texture": _unique_choice(rng, profile["textures"], used_phrases),
+                "voice": _unique_choice(rng, profile["voices"], used_phrases),
+                "discovery": _unique_choice(rng, profile["discoveries"], used_phrases),
+            })
+            paragraph = _paragraph(templates, used_phrases, rng, paragraph_values)
+            if forced and "La escalada" not in paragraph and rng.random() < 0.25:
+                paragraph += f" {_ended(_lower_first(_public(forced.get('description'), 300)))}"
+            if config["crazy"] and rng.random() < 0.2:
+                paragraph += f" Lo imposible se volvió parte de la escena cuando viste {paragraph_values['discovery']}."
+            if config["unlimited"] and rng.random() < 0.2:
+                paragraph += f" La escena cruzó un límite conocido, pero no borró lo descubierto junto a {paragraph_values['obj']}."
+            key = _paragraph_key(paragraph)
+            if not paragraph or key in seen_paragraphs:
+                continue
+            seen_paragraphs.add(key)
+            paragraphs.append(paragraph)
+            words += len(paragraph.split())
+    block_text = "\n\n".join(part for part in sections + paragraphs if part.strip())
+    if not paragraphs:
+        paragraphs = [_public(f"Encontraste {discovery} en {place} y decidiste seguir adelante.", 900)]
+    summary = _public(
+        f"Encontraste {discovery} junto a {obj} en {place} y elegiste continuar con {other}.", 500,
     )
     events = [{
-        "title": options.clean_text(forced.get("title") or f"Desarrollo en {place}", 140),
-        "description": options.clean_text(paragraphs[-1], 900),
-        "narrative_date": f"Ciclo {number} · bloque {index}",
-        "consequences": options.clean_text(paragraphs[-2] if len(paragraphs) > 1 else paragraphs[-1], 600),
+        "title": _public(forced.get("title") or f"Descubrimiento en {place}", 140),
+        "description": _public(paragraphs[-1], 900),
+        "narrative_date": date,
+        "consequences": _public(paragraphs[-2] if len(paragraphs) > 1 else paragraphs[-1], 600),
     }]
     memories = [
         {"kind": "chapter", "content": summary, "confidence": "confirmed", "importance": 7},
-        {"kind": "current", "content": options.clean_text(paragraphs[-1], 900), "confidence": "confirmed", "importance": 9},
+        {"kind": "current", "content": _public(paragraphs[-1], 900), "confidence": "confirmed", "importance": 9},
     ]
     cards = []
     if forced and forced.get("memory_card"):
@@ -804,7 +1044,7 @@ def local_chapter_block(payload: Any = None) -> dict:
         cards.append({
             "kind": "rule_change",
             "subject": place,
-            "content": f"Se sustituyó una regla de {place} por una explicación absurda y funcional.",
+            "content": f"En {place} se aceptó una explicación imposible porque resolvía el conflicto inmediato.",
             "importance": 7,
             "metadata": {"crazy_level": config["crazy_level"], "chapter": number, "explicit": True},
         })
@@ -812,15 +1052,15 @@ def local_chapter_block(payload: Any = None) -> dict:
         cards.append({
             "kind": "unlimited",
             "subject": premise,
-            "content": f"El modo Sin límites permitió revisar {premise} desde otra escala sin borrar la consecuencia ocurrida en {place}.",
+            "content": f"La hipótesis {_lower_first(premise)} se amplió sin borrar lo ocurrido en {place}.",
             "importance": 6,
             "metadata": {"unlimited": 1, "chapter": number},
         })
     if rng.random() * 100 < config["surprise_frequency"]:
         cards.append({
             "kind": "surprise",
-            "subject": character,
-            "content": "Una decisión aparentemente menor cambió el significado de la escena.",
+            "subject": actor,
+            "content": f"Un gesto pequeño de {actor} cambió el significado de {discovery}.",
             "importance": 6,
             "metadata": {"chapter": number, "randomness": config["randomness"]},
         })
@@ -836,12 +1076,17 @@ def local_chapter_block(payload: Any = None) -> dict:
             "kind": "hypothesis",
         })
     return {
+        "title": chapter_title,
         "block": block_text,
         "summary": summary,
         "events": events,
         "memories": memories,
         "memory_cards": [dict(item) for index, item in enumerate(cards)
                          if item not in cards[:index]],
-        "state_updates": {"current_situation": options.clean_text(paragraphs[-1], 800), "characters": [], "locations": []},
+        "state_updates": {
+            "current_situation": _public(paragraphs[-1], 800),
+            "characters": [],
+            "locations": [],
+        },
         "proposed_rules": proposed_rules[:2],
     }

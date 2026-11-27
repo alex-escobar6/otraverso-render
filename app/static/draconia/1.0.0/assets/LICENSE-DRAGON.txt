@@ -1,0 +1,17 @@
+DRACONIA dragon model: assets/dragon_organic/dragon.glb
+========================================================
+
+Source: Original work created for DRACONIA.
+Tool: Blender 4.0.2, Python scripting, custom organic surfaces and PBR materials.
+Blender source: assets/dragon_organic/dragon.blend.
+Preview renders: assets/dragon_organic/preview_front.png, preview_side.png, preview_back.png.
+Texture maps: assets/dragon_organic/scales_base.png, scales_normal.png, scales_roughness.png.
+
+No third-party model, rig, animation, image or geometry was reused. The body,
+head, jaw, horns, eyes, nostrils, four legs, toes, claws, tail, dorsal spines
+and wing membranes were generated as organic surfaces in one continuous mesh
+construction, not as spheres, cones, cylinders or capsules.
+
+The GLB contains geometry, normals, UV coordinates, PBR materials and embedded
+textures. It contains no skeleton, no skin, no morph targets and no animation
+clips. It is a static display model only.

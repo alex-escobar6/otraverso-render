@@ -31,7 +31,8 @@
   <footer class="site-footer" $FOOTER_VISIBLE>
     <div class="container">$FOOTER_HTML</div>
   </footer>
-  <a class="whatsapp-float" $WHATSAPP_VISIBLE href="$WHATSAPP_LINK" target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp">WhatsApp</a>
+  <a class="whatsapp-float" $WHATSAPP_VISIBLE href="$WHATSAPP_LINK" target="_blank" rel="noopener noreferrer"
+     aria-label="Contactar por WhatsApp" data-wa-log="float" data-wa-csrf="$PUBLIC_CSRF" data-wa-url="$WHATSAPP_LINK">WhatsApp</a>
   <script src="/static/js/app.js" defer></script>
   $SCRIPTS
 </body>

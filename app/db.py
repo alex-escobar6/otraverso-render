@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import sqlite3
 import stat
@@ -12,8 +13,45 @@ from typing import Any, Iterable
 from app import db_backend
 from app.config import DATA_DIR, Config
 from app.security import hash_password
+from app.services.play.catalog import GAMES
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 8
+
+SITE_PAGES_SCHEMA = """CREATE TABLE IF NOT EXISTS site_pages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  route TEXT NOT NULL DEFAULT '',
+  universe TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
+  element_type TEXT NOT NULL DEFAULT 'page',
+  parent_code TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','page_only','coming_soon','hidden')),
+  icon TEXT NOT NULL DEFAULT '',
+  image TEXT NOT NULL DEFAULT '',
+  notice_title TEXT NOT NULL DEFAULT '',
+  notice_description TEXT NOT NULL DEFAULT '',
+  notice_button TEXT NOT NULL DEFAULT '',
+  notice_image TEXT NOT NULL DEFAULT '',
+  coming_soon_message TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  nav_visible INTEGER NOT NULL DEFAULT 1 CHECK (nav_visible IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);"""
+
+DRACONIA_SCHEMA = """
+CREATE TABLE IF NOT EXISTS draconia_profiles (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  dragon_name TEXT NOT NULL DEFAULT 'Luma',
+  sound INTEGER NOT NULL DEFAULT 1 CHECK (sound IN (0,1)),
+  reduced_motion INTEGER NOT NULL DEFAULT 0 CHECK (reduced_motion IN (0,1)),
+  last_state TEXT NOT NULL DEFAULT 'idle',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS roles (
@@ -79,23 +117,7 @@ CREATE TABLE IF NOT EXISTS modules (
   sort_order INTEGER NOT NULL DEFAULT 0,
   description TEXT DEFAULT ''
 );
-CREATE TABLE IF NOT EXISTS site_pages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT NOT NULL UNIQUE,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  route TEXT NOT NULL UNIQUE,
-  universe TEXT NOT NULL DEFAULT '',
-  category TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','coming_soon','hidden')),
-  icon TEXT NOT NULL DEFAULT '',
-  image TEXT NOT NULL DEFAULT '',
-  coming_soon_message TEXT NOT NULL DEFAULT '',
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  nav_visible INTEGER NOT NULL DEFAULT 1 CHECK (nav_visible IN (0,1)),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+""" + SITE_PAGES_SCHEMA + """
 CREATE TABLE IF NOT EXISTS suppliers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -139,6 +161,8 @@ CREATE TABLE IF NOT EXISTS products (
   supplier_url TEXT DEFAULT '',
   tags TEXT DEFAULT '',
   attributes TEXT DEFAULT '{}',
+  target_margin_percent INTEGER NOT NULL DEFAULT 0 CHECK (target_margin_percent BETWEEN 0 AND 100),
+  whatsapp_message TEXT NOT NULL DEFAULT '',
   featured INTEGER NOT NULL DEFAULT 0 CHECK (featured IN (0,1)),
   best_seller INTEGER NOT NULL DEFAULT 0 CHECK (best_seller IN (0,1)),
   is_new INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0,1)),
@@ -240,6 +264,7 @@ CREATE TABLE IF NOT EXISTS purchase_requests (
   phone TEXT NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
   source TEXT NOT NULL DEFAULT 'product',
+  zone_id INTEGER REFERENCES delivery_zones(id) ON DELETE SET NULL,
   message TEXT DEFAULT '',
   whatsapp_url TEXT DEFAULT '',
   status TEXT NOT NULL DEFAULT 'contacted' CHECK (status IN ('contacted','converted','closed')),
@@ -251,6 +276,12 @@ CREATE TABLE IF NOT EXISTS whatsapp_clicks (
   request_id INTEGER REFERENCES purchase_requests(id) ON DELETE SET NULL,
   source TEXT NOT NULL DEFAULT 'product',
   phone TEXT DEFAULT '',
+  public_id TEXT NOT NULL DEFAULT '',
+  message TEXT NOT NULL DEFAULT '',
+  url TEXT NOT NULL DEFAULT '',
+  path TEXT NOT NULL DEFAULT '',
+  user_agent TEXT NOT NULL DEFAULT '',
+  trace_id TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS order_statuses (
@@ -271,6 +302,11 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_cents INTEGER NOT NULL DEFAULT 0,
   total_cents INTEGER NOT NULL DEFAULT 0,
   notes TEXT DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'manual',
+  payment_method TEXT NOT NULL DEFAULT '',
+  payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid','paid')),
+  paid_at TEXT,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -282,6 +318,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   name_snapshot TEXT NOT NULL,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   price_cents INTEGER NOT NULL DEFAULT 0,
+  cost_cents INTEGER NOT NULL DEFAULT 0 CHECK (cost_cents >= 0),
   modality TEXT NOT NULL DEFAULT 'stock',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -619,7 +656,7 @@ CREATE INDEX IF NOT EXISTS idx_whatif_memory_cards ON whatif_memory_cards(realit
 CREATE INDEX IF NOT EXISTS idx_whatif_event_timeline ON whatif_events(reality_id, timeline_id, narrative_date);
 CREATE INDEX IF NOT EXISTS idx_whatif_job_status ON whatif_generation_jobs(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_whatif_usage_owner ON whatif_usage(owner_type, owner_key, created_at);
-"""
+""" + DRACONIA_SCHEMA
 
 PERMISSIONS: dict[str, str] = {
     "dashboard.view": "Ver dashboard e indicadores",
@@ -644,6 +681,8 @@ PERMISSIONS: dict[str, str] = {
     "whatif.view": "Ver operación de OTRAVERSO WHAT IF",
     "whatif.edit": "Configurar motores y contenido de WHAT IF",
     "pages.manage": "Gestionar disponibilidad de páginas",
+    "draconia.view": "Entrar al espacio 3D privado de DRACONIA",
+    "draconia.manage": "Administrar el acceso al compañero 3D de DRACONIA",
 }
 
 PAGE_REGISTRY: tuple[dict, ...] = (
@@ -651,13 +690,15 @@ PAGE_REGISTRY: tuple[dict, ...] = (
         "code": "portal", "name": "Inicio", "route": "/",
         "description": "Portada general de OTRAVERSO y navegación del multiverso.",
         "universe": "OTRAVERSO", "category": "Portada", "status": "available",
+        "element_type": "universe", "parent_code": "",
         "icon": "", "image": "", "coming_soon_message": "", "sort_order": 0,
-        "nav_visible": 1, "prefixes": (),
+        "nav_visible": 1, "prefixes": ("/universos",),
     },
     {
         "code": "shop", "name": "Tienda", "route": "/shop",
         "description": "Catálogo, cobertura, productos y solicitudes de OTRAVERSO SHOP.",
         "universe": "OTRAVERSO SHOP", "category": "Universo", "status": "available",
+        "element_type": "universe", "parent_code": "",
         "icon": "", "image": "", "coming_soon_message": "La tienda estará disponible muy pronto.",
         "sort_order": 1, "nav_visible": 1,
         "prefixes": ("/shop", "/pages", "/buscar", "/sitemap.xml", "/robots.txt"),
@@ -666,6 +707,7 @@ PAGE_REGISTRY: tuple[dict, ...] = (
         "code": "whatif", "name": "WHAT IF", "route": "/what-if",
         "description": "Realidades narrativas persistentes de OTRAVERSO WHAT IF.",
         "universe": "OTRAVERSO WHAT IF", "category": "Universo", "status": "available",
+        "element_type": "universe", "parent_code": "",
         "icon": "", "image": "", "coming_soon_message": "WHAT IF estará disponible próximamente. Puedes explorar la página, pero aún no se pueden crear realidades.",
         "sort_order": 2, "nav_visible": 1,
         "prefixes": ("/what-if", "/api/what-if/v1"),
@@ -674,11 +716,72 @@ PAGE_REGISTRY: tuple[dict, ...] = (
         "code": "play", "name": "PLAY", "route": "/play",
         "description": "Juegos, exploración y progreso de OTRAVERSO PLAY.",
         "universe": "OTRAVERSO PLAY", "category": "Universo", "status": "available",
-        "icon": "", "image": "", "coming_soon_message": "PLAY estará disponible próximamente. Puedes visitar la página, pero los juegos aún no están activos.",
+        "element_type": "universe", "parent_code": "",
+        "icon": "", "image": "", "coming_soon_message": "PLAY está en preparación. Consulta las experiencias habilitadas.",
         "sort_order": 3, "nav_visible": 1,
-        "prefixes": ("/play", "/api/play/v1"),
+        "prefixes": ("/play",),
     },
 )
+
+
+def play_element_code(game_code: str) -> str:
+    return "play_game_" + re.sub(r"[^a-z0-9]+", "_", game_code.lower()).strip("_")
+
+
+PLAY_ELEMENTS: tuple[dict, ...] = (
+    {"code": "play_home", "name": "Página principal de PLAY", "route": "/play",
+     "description": "Presentación general de OTRAVERSO PLAY.", "element_type": "page",
+     "parent_code": "play", "universe": "OTRAVERSO PLAY", "category": "Página", "status": "available",
+     "notice_title": "Página principal de PLAY", "notice_description": "Conoce el universo PLAY.",
+     "sort_order": 0, "nav_visible": 0, "prefixes": ()},
+    {"code": "play_hub", "name": "HUB de PLAY", "route": "/play/hub",
+     "description": "Nexo de navegación y acceso a experiencias PLAY.", "element_type": "hub",
+     "parent_code": "play", "universe": "OTRAVERSO PLAY", "category": "Navegación", "status": "available",
+     "notice_title": "HUB de PLAY", "notice_description": "El nexo de PLAY no está habilitado.",
+     "sort_order": 1, "nav_visible": 0, "prefixes": ()},
+    {"code": "play_profile", "name": "Perfil PLAY", "route": "/play/profile",
+     "description": "Perfil y progreso del jugador PLAY ID.", "element_type": "profile",
+     "parent_code": "play", "universe": "OTRAVERSO PLAY", "category": "Servicio", "status": "available",
+     "notice_title": "Perfil PLAY", "notice_description": "El perfil PLAY no está habilitado.",
+     "sort_order": 2, "nav_visible": 0, "prefixes": ()},
+    {"code": "play_catalog", "name": "Catálogo de juegos", "route": "/play#catalogo",
+     "description": "Listado de juegos y experiencias de PLAY.", "element_type": "catalog",
+     "parent_code": "play", "universe": "OTRAVERSO PLAY", "category": "Catálogo", "status": "available",
+     "notice_title": "Catálogo de juegos", "notice_description": "El catálogo de juegos no está disponible.",
+     "sort_order": 3, "nav_visible": 0, "prefixes": ()},
+    {"code": "play_api", "name": "Servicios PLAY", "route": "/api/play/v1",
+     "description": "Endpoints de juegos, manifiestos y progreso PLAY.", "element_type": "service",
+     "parent_code": "play", "universe": "OTRAVERSO PLAY", "category": "Servicio", "status": "available",
+     "notice_title": "Servicios PLAY", "notice_description": "Los servicios de PLAY no están disponibles.",
+     "sort_order": 4, "nav_visible": 0, "prefixes": ("/api/play/v1",)},
+)
+
+
+def _play_game_elements() -> tuple[dict, ...]:
+    elements = []
+    for game in GAMES.values():
+        published = game["status"] == "published"
+        elements.append({
+            "code": play_element_code(game["code"]),
+            "name": game["name"],
+            "route": game["route"],
+            "description": game.get("description", ""),
+            "element_type": "game" if published else "experience",
+            "parent_code": "play",
+            "universe": "OTRAVERSO PLAY",
+            "category": "Juego" if published else "Experiencia planeada",
+            "status": "available" if published else "coming_soon",
+            "notice_title": game["name"],
+            "notice_description": game.get("tagline") or game.get("description", ""),
+            "notice_button": "" if published else "Próximamente",
+            "sort_order": 10 + int(game.get("hub", {}).get("order", 99)),
+            "nav_visible": 0,
+            "prefixes": (),
+        })
+    return tuple(elements)
+
+
+PAGE_ELEMENT_REGISTRY: tuple[dict, ...] = PAGE_REGISTRY + PLAY_ELEMENTS + _play_game_elements()
 
 ROLES: dict[str, set[str]] = {
     "superadmin": set(PERMISSIONS),
@@ -691,6 +794,7 @@ ROLES: dict[str, set[str]] = {
         "dashboard.view", "products.view", "orders.view", "orders.edit",
         "customers.view", "customers.edit", "analytics.view",
     },
+    "draconia_explorer": {"draconia.view"},
 }
 
 DEFAULT_SETTINGS: dict[str, dict[str, str]] = {
@@ -710,6 +814,7 @@ DEFAULT_SETTINGS: dict[str, dict[str, str]] = {
         "delivery_note": "Los plazos dependen de la modalidad del producto y de la zona de destino.",
         "import_conditions": "Los productos bajo pedido se solicitan a proveedores internacionales; el tiempo estimado de importación es independiente del tiempo de entrega local.",
         "terms": "La apertura del chat de WhatsApp no confirma una venta. La disponibilidad y condiciones se confirman con el vendedor.",
+        "sale_disclaimer": "La apertura del chat no confirma una compra. La disponibilidad y condiciones se confirman con OTRAVERSO.",
         "privacy": "Los datos se usan únicamente para gestionar solicitudes y pedidos, conforme a la Ley 1581 de 2012 de Colombia.",
         "returns": "Las devoluciones se evalúan según la modalidad del producto y las condiciones informadas antes de la compra.",
         "payment_methods": "Pago informativo acordado por WhatsApp. Esta tienda no procesa pagos en línea.",
@@ -776,6 +881,7 @@ DEFAULT_SETTINGS: dict[str, dict[str, str]] = {
         "visual_background_color": "#f7f5ff",
         "visual_elements": "[]",
         "narrative_templates": "{}",
+        "chapter_scene_words": "240",
         "chapter_normal_words": "1800",
         "chapter_extended_words": "3200",
         "chapter_cinematic_words": "5000",
@@ -854,15 +960,106 @@ def init_db() -> None:
     _seed()
 
 
+def _exec_ddl(conn, sql: str) -> None:
+    conn.execute(db_backend.adapt_sql(sql, ddl=True)
+                 if Config.DB_BACKEND == "postgres" else sql)
+
+
+def _upgrade_site_pages(conn) -> None:
+    columns = db_backend.table_columns(conn, "site_pages")
+    required = {"element_type", "parent_code", "notice_title", "notice_description",
+                "notice_button", "notice_image"}
+    if required <= columns:
+        return
+    if Config.DB_BACKEND == "postgres":
+        for column, definition in (
+            ("element_type", "TEXT NOT NULL DEFAULT 'page'"),
+            ("parent_code", "TEXT NOT NULL DEFAULT ''"),
+            ("notice_title", "TEXT NOT NULL DEFAULT ''"),
+            ("notice_description", "TEXT NOT NULL DEFAULT ''"),
+            ("notice_button", "TEXT NOT NULL DEFAULT ''"),
+            ("notice_image", "TEXT NOT NULL DEFAULT ''"),
+        ):
+            if column not in columns:
+                conn.execute(f"ALTER TABLE site_pages ADD COLUMN {column} {definition}")
+        conn.execute(
+            "UPDATE site_pages SET element_type='universe', notice_title=name, "
+            "notice_description=coming_soon_message"
+        )
+        constraints = conn.execute(
+            "SELECT conname FROM pg_constraint WHERE conrelid='site_pages'::regclass "
+            "AND contype IN ('u','c') AND (pg_get_constraintdef(oid) LIKE '%(route)%' "
+            "OR pg_get_constraintdef(oid) LIKE '%status%')"
+        ).fetchall()
+        for row in constraints:
+            conn.execute(f"ALTER TABLE site_pages DROP CONSTRAINT {row[0]}")
+        conn.execute(
+            "ALTER TABLE site_pages ADD CONSTRAINT site_pages_status_check "
+            "CHECK (status IN ('available','page_only','coming_soon','hidden'))"
+        )
+        return
+    _exec_ddl(conn, "ALTER TABLE site_pages RENAME TO site_pages_old")
+    _exec_ddl(conn, SITE_PAGES_SCHEMA.replace("IF NOT EXISTS ", ""))
+    conn.execute(
+        "INSERT INTO site_pages(id,code,name,description,route,universe,category,element_type,parent_code,"
+        "status,icon,image,notice_title,notice_description,notice_button,notice_image,coming_soon_message,"
+        "sort_order,nav_visible,created_at,updated_at) "
+        "SELECT id,code,name,description,route,universe,category,'universe','',"
+        "CASE WHEN status IN ('available','page_only','coming_soon','hidden') THEN status ELSE 'available' END,"
+        "icon,image,name,coming_soon_message,'','',coming_soon_message,sort_order,nav_visible,created_at,updated_at "
+        "FROM site_pages_old"
+    )
+    _exec_ddl(conn, "DROP TABLE site_pages_old")
+
+
 def _migrate(conn) -> None:
-    columns = db_backend.table_columns(conn, "products")
-    if "seo_title" not in columns:
-        conn.execute("ALTER TABLE products ADD COLUMN seo_title TEXT DEFAULT ''")
-    if "seo_description" not in columns:
-        conn.execute("ALTER TABLE products ADD COLUMN seo_description TEXT DEFAULT ''")
-    reality_columns = db_backend.table_columns(conn, "whatif_realities")
-    if "narrative_config" not in reality_columns:
-        conn.execute("ALTER TABLE whatif_realities ADD COLUMN narrative_config TEXT NOT NULL DEFAULT '{}'")
+    def add_column(table: str, column: str, definition: str) -> None:
+        if column not in db_backend.table_columns(conn, table):
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    _upgrade_site_pages(conn)
+    add_column("products", "seo_title", "TEXT DEFAULT ''")
+    add_column("products", "seo_description", "TEXT DEFAULT ''")
+    add_column("products", "target_margin_percent",
+               "INTEGER NOT NULL DEFAULT 0 CHECK (target_margin_percent BETWEEN 0 AND 100)")
+    add_column("products", "whatsapp_message", "TEXT NOT NULL DEFAULT ''")
+    add_column("orders", "source", "TEXT NOT NULL DEFAULT 'manual'")
+    add_column("orders", "payment_method", "TEXT NOT NULL DEFAULT ''")
+    add_column("orders", "payment_status",
+               "TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid','paid'))")
+    add_column("orders", "paid_at", "TEXT")
+    add_column("orders", "created_by", "INTEGER REFERENCES users(id) ON DELETE SET NULL")
+    add_column("order_items", "cost_cents", "INTEGER NOT NULL DEFAULT 0 CHECK (cost_cents >= 0)")
+    add_column("purchase_requests", "zone_id", "INTEGER REFERENCES delivery_zones(id) ON DELETE SET NULL")
+    for column, definition in (
+        ("public_id", "TEXT NOT NULL DEFAULT ''"),
+        ("message", "TEXT NOT NULL DEFAULT ''"),
+        ("url", "TEXT NOT NULL DEFAULT ''"),
+        ("path", "TEXT NOT NULL DEFAULT ''"),
+        ("user_agent", "TEXT NOT NULL DEFAULT ''"),
+        ("trace_id", "TEXT NOT NULL DEFAULT ''"),
+    ):
+        add_column("whatsapp_clicks", column, definition)
+    add_column("whatif_realities", "narrative_config", "TEXT NOT NULL DEFAULT '{}'")
+    add_column("draconia_profiles", "sound", "INTEGER NOT NULL DEFAULT 1 CHECK (sound IN (0,1))")
+    add_column("draconia_profiles", "last_state", "TEXT NOT NULL DEFAULT 'idle'")
+
+
+def _seed_draconia(conn) -> None:
+    defaults = {
+        "protagonist_name": "Paula",
+        "companion_default_name": "Luma",
+        "sound_default": "1",
+        "reduced_motion_default": "0",
+    }
+    for key, value in defaults.items():
+        conn.execute(
+            "INSERT OR IGNORE INTO settings(category,key,value) VALUES ('draconia',?,?)", (key, value)
+        )
+    conn.execute(
+        "DELETE FROM settings WHERE category='draconia' AND key NOT IN (?,?,?,?)",
+        tuple(defaults)
+    )
 
 
 def _seed() -> None:
@@ -872,8 +1069,9 @@ def _seed() -> None:
         for code, perms in ROLES.items():
             conn.execute("INSERT OR IGNORE INTO roles(code, name, description) VALUES (?, ?, ?)", (
                 code,
-                {"superadmin": "Superadministrador", "admin": "Administrador",
-                 "product_manager": "Gestor de productos", "order_manager": "Gestor de pedidos"}[code],
+                 {"superadmin": "Superadministrador", "admin": "Administrador",
+                  "product_manager": "Gestor de productos", "order_manager": "Gestor de pedidos",
+                   "draconia_explorer": "Compañero de DRACONIA"}[code],
                 "Rol del sistema OTRAVERSO",
             ))
             role_id = conn.execute("SELECT id FROM roles WHERE code = ?", (code,)).fetchone()[0]
@@ -902,14 +1100,27 @@ def _seed() -> None:
             "UPDATE modules SET enabled=1, coming_soon=0, "
             "description='Universo de realidades narrativas persistentes.' WHERE code='whatif'"
         )
-        for page in PAGE_REGISTRY:
+        for page in PAGE_ELEMENT_REGISTRY:
             conn.execute(
-                "INSERT OR IGNORE INTO site_pages(code,name,description,route,universe,category,status,"
-                "icon,image,coming_soon_message,sort_order,nav_visible) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (page["code"], page["name"], page["description"], page["route"], page["universe"],
-                 page["category"], page["status"], page["icon"], page["image"],
-                 page["coming_soon_message"], page["sort_order"], page["nav_visible"]),
+                "INSERT OR IGNORE INTO site_pages(code,name,description,route,universe,category,element_type,"
+                "parent_code,status,icon,image,notice_title,notice_description,notice_button,notice_image,"
+                "coming_soon_message,sort_order,nav_visible) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (page["code"], page["name"], page.get("description", ""), page["route"],
+                 page["universe"], page["category"], page.get("element_type", "page"),
+                 page.get("parent_code", ""), page["status"], page.get("icon", ""), page.get("image", ""),
+                 page.get("notice_title") or page["name"],
+                 page.get("notice_description") or page.get("coming_soon_message", ""),
+                 page.get("notice_button", ""), page.get("notice_image", ""),
+                 page.get("coming_soon_message", ""), page.get("sort_order", 0),
+                 page.get("nav_visible", 1)),
             )
+        conn.execute(
+            "UPDATE site_pages SET coming_soon_message=?, notice_description=? "
+            "WHERE code='play' AND coming_soon_message LIKE 'PLAY estará disponible próximamente%'",
+            ("PLAY está en preparación. Consulta las experiencias habilitadas.",
+             "PLAY está en preparación. Consulta las experiencias habilitadas."),
+        )
+        _seed_draconia(conn)
 
         for category, values in DEFAULT_SETTINGS.items():
             for key, value in values.items():
@@ -924,7 +1135,7 @@ def _seed() -> None:
                 ("pending", "Pendiente", 1), ("confirmed", "Confirmado", 2),
                 ("preparing", "En preparación", 3), ("shipped", "Enviado", 4),
                 ("delivered", "Entregado", 5), ("importing", "Bajo importación", 6),
-                ("cancelled", "Cancelado", 7),
+                ("paid", "Pagado (registro manual)", 7), ("cancelled", "Cancelado", 8),
             ],
         )
         conn.executemany(

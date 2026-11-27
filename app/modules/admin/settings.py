@@ -4,7 +4,8 @@ from __future__ import annotations
 from app.config import Config
 from app.core.http import Request, Response, redirect
 from app.core.render import esc, render
-from app.db import execute, query, set_setting, settings_group, transaction
+from app.db import execute, query, settings_group, transaction
+from app.services.whatsapp import business_phone
 from . import admin_page, audit, csrf_input, go, upload_image
 
 COMMERCIAL_FIELDS = [
@@ -18,6 +19,7 @@ COMMERCIAL_FIELDS = [
     ("delivery_note", "Nota de entregas", "textarea"), ("import_conditions", "Condiciones de importación", "textarea"),
     ("terms", "Condiciones de compra", "textarea"), ("privacy", "Política de privacidad", "textarea"),
     ("returns", "Cambios y devoluciones", "textarea"), ("payment_methods", "Métodos de pago informativos", "textarea"),
+    ("sale_disclaimer", "Aviso de venta y confirmación", "textarea"),
     ("footer_text", "Texto del pie de página", "textarea"),
 ]
 
@@ -90,11 +92,12 @@ def settings_page(request: Request, section: str = "commercial") -> Response:
     elif section == "whatsapp":
         fields = _fields(section, WHATSAPP_FIELDS, values, csrf_input(request))
         commercial = settings_group("commercial")
-        fields += f'<div class="field full"><label>Número de WhatsApp</label><input name="whatsapp_number" value="{esc(commercial.get("whatsapp",""))}"></div>'
+        fields += f'<div class="field full"><label>Número de WhatsApp</label><input name="whatsapp_number" value="{esc(business_phone(commercial.get("whatsapp", "")))}"></div>'
         templates = query("SELECT * FROM whatsapp_templates ORDER BY id")
         template_rows = "".join(
             f'<tr><td>{esc(t["name"])}</td><td>{esc(t["code"])}</td><td>{esc(t["modality"])}</td>'
             f'<td><form method="post" action="/admin/settings/whatsapp/templates/{t["id"]}/update">{csrf_input(request)}'
+            f'<label class="checkline"><input type="checkbox" name="active" value="1"{" checked" if t["active"] else ""}> Activa</label>'
             f'<textarea name="body" rows="2">{esc(t["body"])}</textarea>'
             '<button class="btn btn-sm btn-primary" type="submit">Guardar</button></form></td>'
             f'<td><form method="post" action="/admin/settings/whatsapp/templates/{t["id"]}/delete">{csrf_input(request)}'
@@ -116,8 +119,9 @@ def settings_page(request: Request, section: str = "commercial") -> Response:
     tab_active = lambda name: "active" if section == name else ""
     content = render("admin/settings_form.html", SECTION=esc(section.upper()), CSRF=csrf_input(request), FIELDS=fields,
                      EXTRA="", TAB_COMMERCIAL=tab_active("commercial"), TAB_VISUAL=tab_active("visual"),
-                     TAB_WHATSAPP=tab_active("whatsapp"), TAB_SEO=tab_active("seo"),
-                     TAB_MODULES=tab_active("modules"))
+                      TAB_WHATSAPP=tab_active("whatsapp"), TAB_SEO=tab_active("seo"),
+                      TAB_MODULES=tab_active("modules"), TAB_PAGES="")
+
     return admin_page(request, "Configuración — " + section.title(), content,
                       "whatsapp" if section == "whatsapp" else "settings")
 
@@ -141,8 +145,12 @@ def settings_save(request: Request, section: str) -> Response:
                 (section, key, value),
             )
         if section == "whatsapp":
-            number = request.param("whatsapp_number", "").strip()
-            conn.execute("UPDATE settings SET value=?,updated_at=CURRENT_TIMESTAMP WHERE category='commercial' AND key='whatsapp'", (number,))
+            number = business_phone(request.param("whatsapp_number", ""))
+            conn.execute(
+                "INSERT INTO settings(category,key,value) VALUES ('commercial','whatsapp',?) "
+                "ON CONFLICT(category,key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
+                (number,),
+            )
         if section == "modules":
             for module in query("SELECT id FROM modules"):
                 conn.execute("UPDATE modules SET enabled=?,coming_soon=? WHERE id=?",
@@ -160,8 +168,9 @@ def template_create(request: Request) -> Response:
     if not code or not name or not body:
         return go("/admin/settings/whatsapp", error="Código, nombre y mensaje son obligatorios")
     try:
-        execute("INSERT INTO whatsapp_templates(code,name,body,modality) VALUES (?,?,?,?)",
-                (code, name, body, request.param("modality", "any")))
+        execute("INSERT INTO whatsapp_templates(code,name,body,modality,active) VALUES (?,?,?,?,?)",
+                (code, name, body, request.param("modality", "any"),
+                 1 if request.param("active") == "1" else 0))
     except Exception:
         return go("/admin/settings/whatsapp", error="Ya existe una plantilla con ese código")
     audit(request, "create", "whatsapp_template", code)
@@ -169,8 +178,9 @@ def template_create(request: Request) -> Response:
 
 
 def template_update(request: Request, tid: int) -> Response:
-    execute("UPDATE whatsapp_templates SET body=?,name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
-            (request.param("body", "").strip(), request.param("name", "").strip(), tid))
+    execute("UPDATE whatsapp_templates SET body=?,name=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (request.param("body", "").strip(), request.param("name", "").strip(),
+             1 if request.param("active") == "1" else 0, tid))
     audit(request, "update", "whatsapp_template", tid)
     return go("/admin/settings/whatsapp", ok="Plantilla actualizada")
 

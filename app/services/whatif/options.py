@@ -50,6 +50,7 @@ IDEA_VARIATIONS = (
 )
 
 CHAPTER_LENGTHS = (
+    {"code": "escena", "label": "Escena corta", "setting": "chapter_scene_words", "words": 240},
     {"code": "normal", "label": "Normal", "setting": "chapter_normal_words", "words": 1800},
     {"code": "extenso", "label": "Extenso", "setting": "chapter_extended_words", "words": 3200},
     {"code": "cinematografico", "label": "Cinematográfico", "setting": "chapter_cinematic_words", "words": 5000},
@@ -109,6 +110,51 @@ INTERVENTIONS = (
     {"code": "nuevo", "label": "Introducir algo nuevo"},
     {"code": "punto-vista", "label": "Cambiar el punto de vista"},
     {"code": "alternativa", "label": "Crear una alternativa"},
+)
+
+SIMULATION_TEMPLATES = (
+    {
+        "idea": "Viajar al año 30 d. C., en Judea, con conocimientos de la historia futura",
+        "label": "Judea · año 30 d. C.",
+        "mode": "normal",
+        "genre": "historia-alternativa",
+        "style": "realista",
+    },
+    {
+        "idea": "¿Y si los dinosaurios nunca se hubieran extinguido y hubieran fundado civilizaciones?",
+        "label": "Dinosaurios · civilización perdida",
+        "mode": "normal",
+        "genre": "historia-alternativa",
+        "style": "aventurero",
+    },
+    {
+        "idea": "¿Y si Roma nunca hubiera caído y sus legiones llegaran a la era digital?",
+        "label": "Roma · imperio continuo",
+        "mode": "normal",
+        "genre": "historia-alternativa",
+        "style": "epico",
+    },
+    {
+        "idea": "¿Y si el último amanecer antes del apocalipsis pudiera decidirse en una sola noche?",
+        "label": "Apocalipsis · última noche",
+        "mode": "apocalipsis",
+        "genre": "supervivencia",
+        "style": "cinematografico",
+    },
+    {
+        "idea": "¿Y si los sueños de una ciudad se volvieran reales durante siete minutos cada noche?",
+        "label": "Loco · siete minutos",
+        "mode": "loco",
+        "genre": "surrealista",
+        "style": "absurdo",
+    },
+    {
+        "idea": "¿Y si una civilización submarina te ofreciera reescribir las reglas del mundo?",
+        "label": "Sin límites · océano profundo",
+        "mode": "sin-limites",
+        "genre": "ciencia-ficcion",
+        "style": "misterioso",
+    },
 )
 
 INSPIRATION = (
@@ -202,6 +248,16 @@ def clean_text(value: object, limit: int = 1200, *, paragraphs: bool = False) ->
     return text.strip()[:limit]
 
 
+def clean_narrative(value: object, limit: int = 120000, *, paragraphs: bool = True) -> str:
+    text = clean_text(value, limit, paragraphs=paragraphs)
+    text = re.sub(r"\[\s*(?:established|proposed|confirmed|unknown|belief)\s*\]", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b\d+\.\d+\.\d+\b", "", text)
+    text = re.sub(r"\bCiclo\s+\d+\s*·\s*bloque\s+\d+\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n{4,}", "\n\n", text)
+    return text.strip()
+
+
 def slugify(value: str) -> str:
     text = unicodedata.normalize("NFKD", clean_text(value, 160))
     text = "".join(char for char in text if not unicodedata.combining(char)).lower()
@@ -240,6 +296,7 @@ def options_payload() -> dict:
         "formats": FORMATS,
         "interventions": INTERVENTIONS,
         "inspiration": INSPIRATION,
+        "simulation_templates": SIMULATION_TEMPLATES,
         "modes": MODES_LIST,
         "idea_variations": IDEA_VARIATIONS,
         "chapter_lengths": CHAPTER_LENGTHS,

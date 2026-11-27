@@ -11,7 +11,7 @@ from app.config import Config
 
 NO_ID_TABLES = {
     "app_meta", "role_permissions", "settings", "product_related", "play_profiles",
-    "play_achievements", "play_collectibles",
+    "play_achievements", "play_collectibles", "draconia_profiles",
 }
 
 

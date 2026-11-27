@@ -1,7 +1,7 @@
 <div style="margin-top:2rem">
   <h2>Plantillas adicionales de WhatsApp</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>Nombre</th><th>Código</th><th>Modalidad</th><th>Mensaje</th><th></th></tr></thead>
+    <thead><tr><th>Nombre</th><th>Código</th><th>Modalidad</th><th>Activa / mensaje</th><th></th></tr></thead>
     <tbody>$ROWS</tbody></table></div>
   <h3 style="margin-top:1rem">Nueva plantilla</h3>
   <form class="form-grid" method="post" action="/admin/settings/whatsapp/templates">
@@ -9,6 +9,7 @@
     <div class="field"><label>Nombre</label><input name="name" required></div>
     <div class="field"><label>Código</label><input name="code" required placeholder="recordatorio"></div>
     <div class="field"><label>Modalidad</label><select name="modality"><option value="any">Cualquiera</option><option value="stock">Inventario</option><option value="order">Bajo pedido</option></select></div>
+    <div class="field"><label class="checkline"><input type="checkbox" name="active" value="1" checked> Activa</label></div>
     <div class="field full"><label>Mensaje</label><textarea name="body" rows="3" required></textarea></div>
     <div class="field full"><button class="btn btn-primary" type="submit">Crear plantilla</button></div>
   </form>

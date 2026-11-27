@@ -57,7 +57,9 @@ def coverage_home(request: Request) -> Response:
         f'<input name="price" type="number" value="{r["price_cents"]/100:.0f}" style="width:90px"></td>'
         f'<td><input name="hours" type="number" value="{r["estimated_hours"]}" style="width:80px"></td>'
         f'<td><input name="label" value="{esc(r["label"])}"></td>'
-        f'<td><button class="btn btn-sm btn-primary" type="submit">Guardar</button></form></td>'
+        f'<td><input type="hidden" name="active" value="0">'
+        f'<label class="checkline"><input type="checkbox" name="active" value="1"{" checked" if r["active"] else ""}> Activa</label>'
+        f'<button class="btn btn-sm btn-primary" type="submit">Guardar</button></form></td>'
         f'<td>{esc(r["conditions"])}</td></tr>' for r in rates
     )
     content = render("admin/coverage.html", CSRF=csrf_input(request), DEPT_OPTIONS=dept_options,

@@ -4,9 +4,12 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.http import HTTPError, Request, Response
-from app.core.render import esc, render
+from app.core.render import esc, money, render
 from app.db import execute, one, query, transaction
-from app.services.catalog import slugify
+from app.services.catalog import (
+    discount_percent, margin_cents, margin_percent, parse_cents,
+    slugify, suggested_price,
+)
 from app.services.inventory import add_movement
 from . import (admin_page, audit, csrf_input, go, int_or_none, parse_ids, parse_specs,
                remove_upload, specs_text, upload_images)
@@ -24,6 +27,7 @@ def register(router) -> None:
     router.post("/admin/products/{pid}/images", images_upload, permission="products.edit", name="admin.product.images")
     router.post("/admin/products/{pid}/images/{image_id}/delete", image_delete, permission="products.edit", name="admin.product.image.delete")
     router.post("/admin/products/{pid}/variants", variant_create, permission="products.edit", name="admin.product.variant")
+    router.post("/admin/products/{pid}/variants/{variant_id}/update", variant_update, permission="products.edit", name="admin.product.variant.update")
     router.post("/admin/products/{pid}/variants/{variant_id}/delete", variant_delete, permission="products.edit", name="admin.product.variant.delete")
     router.post("/admin/categories", category_create, permission="products.edit", name="admin.category.create")
     router.post("/admin/categories/{cid}/toggle", category_toggle, permission="products.edit", name="admin.category.toggle")
@@ -32,10 +36,7 @@ def register(router) -> None:
 
 
 def _cents(value: Any) -> int:
-    try:
-        return max(0, int(round(float(str(value or 0).replace(",", ".")) * 100)))
-    except ValueError:
-        return 0
+    return parse_cents(value)
 
 
 def _unique_slug(base: str, exclude_id: int | None = None) -> str:
@@ -80,7 +81,8 @@ def products_list(request: Request) -> Response:
           <td><strong>{esc(row['name'])}</strong><br><small class="hint">{esc(row['slug'])}</small></td>
           <td>{esc(row['category_name'] or '—')}</td>
           <td>{'<span class="badge stock">Inventario</span>' if row['modality']=='stock' else '<span class="badge order">Bajo pedido</span>'}</td>
-          <td>${row['price_cents']/100:,.0f}</td>
+          <td>{money(row['price_cents'])}</td>
+          <td class="hint">{money(row['cost_cents'])}<br><small>{margin_percent(row['cost_cents'], row['price_cents']):.1f} %</small></td>
           <td>{row['stock'] if row['modality']=='stock' else 'N/A'}</td>
           <td>{row['images']}</td>
           <td><span class="status-tag {status_class}">{esc(row['status'])}</span></td>
@@ -106,7 +108,7 @@ def products_list(request: Request) -> Response:
     content = render("admin/products.html",
         CSRF=csrf_input(request),
         SEARCH=esc(request.query.get("q", "")),
-        ROWS="".join(body) or '<tr><td colspan="8">No hay productos registrados.</td></tr>',
+        ROWS="".join(body) or '<tr><td colspan="10">No hay productos registrados.</td></tr>',
         CATEGORY_ROWS=category_rows,
         SUPPLIER_ROWS=supplier_rows,
     )
@@ -132,44 +134,69 @@ def product_form(request: Request, pid: int = 0) -> Response:
         '<button class="btn btn-sm btn-danger" type="submit">Quitar</button></form></div>' for i in images
     )
     variant_html = "".join(
-        f'<tr><td>{esc(v["name"])}</td><td>{esc(v["sku"])}</td><td>{v["price_delta_cents"]/100:,.0f}</td><td>{v["stock"]}</td>'
-        f'<td><form method="post" action="/admin/products/{pid}/variants/{v["id"]}/delete">{csrf_input(request)}'
-        '<button class="btn btn-sm btn-danger" type="submit">Eliminar</button></form></td></tr>' for v in variants
+        f'<tr><td><input form="variant-update-{v["id"]}" name="name" value="{esc(v["name"] or "")}" required></td>'
+        f'<td><input form="variant-update-{v["id"]}" name="sku" value="{esc(v["sku"] or "")}"></td>'
+        f'<td><input form="variant-update-{v["id"]}" name="price_delta" type="number" value="{(v["price_delta_cents"] or 0)/100:.0f}"></td>'
+        f'<td><input form="variant-update-{v["id"]}" name="stock" type="number" min="0" value="{v["stock"] or 0}"></td>'
+        f'<td><input form="variant-update-{v["id"]}" name="active" type="checkbox" value="1"'
+        f'{" checked" if v["active"] else ""}></td>'
+        f'<td><div class="row-actions"><form id="variant-update-{v["id"]}" method="post" '
+        f'action="/admin/products/{pid}/variants/{v["id"]}/update">{csrf_input(request)}'
+        '<button class="btn btn-sm" type="submit">Guardar</button></form>'
+        f'<form method="post" action="/admin/products/{pid}/variants/{v["id"]}/delete">{csrf_input(request)}'
+        '<button class="btn btn-sm btn-danger" type="submit">Eliminar</button></form></div></td></tr>' for v in variants
     )
     image_panel = render("admin/product_images.html", CSRF=csrf_input(request), IMAGES=image_html, PRODUCT_ID=pid) if pid else ""
     variant_panel = render("admin/product_variants.html", CSRF=csrf_input(request), VARIANTS=variant_html, PRODUCT_ID=pid) if pid else ""
-    values = product or {}
-    checked = lambda key: " checked" if values.get(key) else ""
+    values = dict(product) if product is not None else {}
+
+    def stored(key: str, default: Any = "") -> Any:
+        value = values.get(key)
+        return default if value is None else value
+
+    status = stored("status", "draft") or "draft"
+    checked = lambda key: " checked" if stored(key) else ""
+    price_cents = int(stored("price_cents", 0) or 0)
+    cost_cents = int(stored("cost_cents", 0) or 0)
+    target_margin = int(stored("target_margin_percent", 0) or 0)
+    compare_cents = int(stored("compare_price_cents", 0) or 0)
+    stock = stored("stock", 0)
     content = render("admin/product_form.html",
         CSRF=csrf_input(request),
         ACTION=f'/admin/products/{pid}/update' if pid else '/admin/products/create',
-        NAME=esc(values.get("name", "")), SLUG=esc(values.get("slug", "")),
-        SKU=esc(values.get("sku", "")), SHORT=esc(values.get("short_description", "")),
-        DESCRIPTION=esc(values.get("description", "")),
-        CATEGORY_OPTIONS=_options(categories, values.get("category_id")),
-        SUPPLIER_OPTIONS=_options(suppliers, values.get("supplier_id")),
-        MODALITY_STOCK=" selected" if values.get("modality", "stock") == "stock" else "",
-        MODALITY_ORDER=" selected" if values.get("modality") == "order" else "",
-        STATUS=esc(values.get("status", "draft")),
+        NAME=esc(stored("name")), SLUG=esc(stored("slug")),
+        SKU=esc(stored("sku")), SHORT=esc(stored("short_description")),
+        DESCRIPTION=esc(stored("description")),
+        CATEGORY_OPTIONS=_options(categories, stored("category_id")),
+        SUPPLIER_OPTIONS=_options(suppliers, stored("supplier_id")),
+        MODALITY_STOCK=" selected" if stored("modality", "stock") == "stock" else "",
+        MODALITY_ORDER=" selected" if stored("modality") == "order" else "",
+        STATUS=esc(status),
         STATUS_OPTIONS="".join(
-            f'<option value="{code}"{" selected" if values.get("status","draft")==code else ""}>{label}</option>'
+            f'<option value="{code}"{" selected" if status==code else ""}>{label}</option>'
             for code, label in (("draft", "Borrador"), ("active", "Activo"), ("archived", "Archivado"))
         ),
-        PRICE=f'{(values.get("price_cents", 0) or 0)/100:.0f}',
-        COMPARE=f'{(values.get("compare_price_cents", 0) or 0)/100:.0f}',
-        COST=f'{(values.get("cost_cents", 0) or 0)/100:.0f}',
-        STOCK=values.get("stock", 0), THRESHOLD=values.get("low_stock_threshold", 3),
-        DELIVERY_HOURS=values.get("delivery_hours", 24), IMPORT_DAYS=values.get("import_days", 30),
-        SUPPLIER_URL=esc(values.get("supplier_url", "")), TAGS=esc(values.get("tags", "")),
-        SPECS=esc(specs_text(values.get("attributes", "{}"))),
-        SEO_TITLE=esc(values.get("seo_title", "")), SEO_DESCRIPTION=esc(values.get("seo_description", "")),
+        PRICE=f'{price_cents/100:.0f}',
+        COMPARE=f'{compare_cents/100:.0f}',
+        COST=f'{cost_cents/100:.0f}',
+        TARGET_MARGIN=str(target_margin),
+        MARGIN_COP=money(margin_cents(cost_cents, price_cents)),
+        MARGIN_PERCENT=f'{margin_percent(cost_cents, price_cents):.1f} %',
+        DISCOUNT_PERCENT=f'{discount_percent(price_cents, compare_cents):.1f} %',
+        SUGGESTED_PRICE=money(suggested_price(cost_cents, target_margin)),
+        WHATSAPP_MESSAGE=esc(stored("whatsapp_message")),
+        STOCK=stock, THRESHOLD=stored("low_stock_threshold", 3),
+        DELIVERY_HOURS=stored("delivery_hours", 24), IMPORT_DAYS=stored("import_days", 30),
+        SUPPLIER_URL=esc(stored("supplier_url")), TAGS=esc(stored("tags")),
+        SPECS=esc(specs_text(stored("attributes", "{}") or "{}")),
+        SEO_TITLE=esc(stored("seo_title")), SEO_DESCRIPTION=esc(stored("seo_description")),
         RELATED_OPTIONS=related_options,
         RELATED_IDS=",".join(str(item) for item in related_ids),
         FEATURED=checked("featured"), BEST=checked("best_seller"), NEW=checked("is_new"),
         IMAGE_PANEL=image_panel, FORM_PANEL=variant_panel,
         EDITING="1" if pid else "",
         EDITING_DISABLED="readonly" if pid else "",
-        STOCK_HINT=(f'Existencia actual: {values.get("stock",0)}. Use Inventario para registrar movimientos.'
+        STOCK_HINT=(f'Existencia actual: {stock}. Use Inventario para registrar movimientos.'
                     if pid else "La existencia inicial se registra como entrada de inventario."),
     )
     return admin_page(request, "Editar producto" if pid else "Nuevo producto", content, "products")
@@ -195,6 +222,8 @@ def _form_values(request: Request) -> dict[str, Any]:
         "supplier_url": request.param("supplier_url", "").strip(),
         "tags": request.param("tags", "").strip(),
         "attributes": parse_specs(request.param("attributes")),
+        "target_margin_percent": min(100, max(0, request.int_param("target_margin_percent", 0))),
+        "whatsapp_message": request.param("whatsapp_message", "").strip()[:2000],
         "featured": 1 if request.param("featured") == "1" else 0,
         "best_seller": 1 if request.param("best_seller") == "1" else 0,
         "is_new": 1 if request.param("is_new") == "1" else 0,
@@ -213,13 +242,15 @@ def product_create(request: Request) -> Response:
     columns = ["name", "slug", "sku", "category_id", "supplier_id", "short_description", "description",
                "modality", "status", "price_cents", "compare_price_cents", "cost_cents", "stock",
                "low_stock_threshold", "delivery_hours", "import_days", "supplier_url", "tags",
-               "attributes", "featured", "best_seller", "is_new", "seo_title", "seo_description", "published_at"]
+                "attributes", "target_margin_percent", "whatsapp_message", "featured", "best_seller",
+                "is_new", "seo_title", "seo_description", "published_at"]
     data = [values["name"], slug, values["sku"], values["category_id"], values["supplier_id"],
             values["short_description"], values["description"], values["modality"], values["status"],
             values["price_cents"], values["compare_price_cents"], values["cost_cents"], 0,
             values["low_stock_threshold"], values["delivery_hours"], values["import_days"],
-            values["supplier_url"], values["tags"], values["attributes"], values["featured"],
-            values["best_seller"], values["is_new"], values["seo_title"], values["seo_description"],
+             values["supplier_url"], values["tags"], values["attributes"], values["target_margin_percent"],
+             values["whatsapp_message"], values["featured"], values["best_seller"],
+             values["is_new"], values["seo_title"], values["seo_description"],
             "CURRENT_TIMESTAMP" if values["status"] == "active" else None]
     placeholders = []
     for item in data:
@@ -248,18 +279,27 @@ def product_update(request: Request, pid: int) -> Response:
     if len(values["name"]) < 2 or values["price_cents"] <= 0:
         return go(f"/admin/products/{pid}/edit", error="Nombre y precio son obligatorios")
     slug = _unique_slug(values["slug_source"], pid)
+    if values["category_id"] and not one("SELECT 1 FROM categories WHERE id=?", (values["category_id"],)):
+        return go(f"/admin/products/{pid}/edit", error="La categoría seleccionada no existe")
+    if values["supplier_id"] and not one("SELECT 1 FROM suppliers WHERE id=?", (values["supplier_id"],)):
+        return go(f"/admin/products/{pid}/edit", error="El proveedor seleccionado no existe")
     fields = ["name=?", "slug=?", "sku=?", "category_id=?", "supplier_id=?", "short_description=?",
               "description=?", "modality=?", "status=?", "price_cents=?", "compare_price_cents=?",
               "cost_cents=?", "low_stock_threshold=?", "delivery_hours=?", "import_days=?",
-              "supplier_url=?", "tags=?", "attributes=?", "featured=?", "best_seller=?",
+               "supplier_url=?", "tags=?", "attributes=?", "target_margin_percent=?",
+               "whatsapp_message=?", "featured=?", "best_seller=?",
               "is_new=?", "seo_title=?", "seo_description=?", "updated_at=CURRENT_TIMESTAMP"]
     params: list[Any] = [values["name"], slug, values["sku"], values["category_id"], values["supplier_id"],
                          values["short_description"], values["description"], values["modality"],
                          values["status"], values["price_cents"], values["compare_price_cents"],
                          values["cost_cents"], values["low_stock_threshold"], values["delivery_hours"],
-                         values["import_days"], values["supplier_url"], values["tags"], values["attributes"],
-                         values["featured"], values["best_seller"], values["is_new"],
+                          values["import_days"], values["supplier_url"], values["tags"], values["attributes"],
+                          values["target_margin_percent"], values["whatsapp_message"],
+                          values["featured"], values["best_seller"], values["is_new"],
                          values["seo_title"], values["seo_description"], pid]
+    status_changed = product["status"] != values["status"]
+    if status_changed and values["status"] == "active" and not product["published_at"]:
+        fields.append("published_at=CURRENT_TIMESTAMP")
     with transaction() as conn:
         conn.execute(f"UPDATE products SET {','.join(fields)} WHERE id=?", params)
         conn.execute("DELETE FROM product_related WHERE product_id=?", (pid,))
@@ -267,7 +307,9 @@ def product_update(request: Request, pid: int) -> Response:
             if related_id != pid:
                 conn.execute("INSERT OR IGNORE INTO product_related(product_id,related_id) VALUES (?,?)",
                              (pid, related_id))
-    audit(request, "update", "product", pid, {"name": values["name"]})
+    audit(request, "update", "product", pid, {
+        "name": values["name"], "status_from": product["status"], "status_to": values["status"],
+    })
     return go(f"/admin/products/{pid}/edit", ok="Producto actualizado")
 
 
@@ -291,14 +333,16 @@ def product_duplicate(request: Request, pid: int) -> Response:
         new_id = conn.execute(
             "INSERT INTO products(category_id,supplier_id,name,slug,sku,short_description,description,modality,"
             "status,price_cents,compare_price_cents,cost_cents,stock,low_stock_threshold,delivery_hours,"
-            "import_days,supplier_url,tags,attributes,featured,best_seller,is_new) "
-            "VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?,0,?,?,?,?,?,?,?,?,?)",
+            "import_days,supplier_url,tags,attributes,target_margin_percent,whatsapp_message,"
+            "featured,best_seller,is_new) "
+            "VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?,0,?,?,?,?,?,?,?,?,?,?,?)",
             (product["category_id"], product["supplier_id"], product["name"] + " (copia)", slug,
              product["sku"], product["short_description"], product["description"], product["modality"],
              product["price_cents"], product["compare_price_cents"], product["cost_cents"],
              product["low_stock_threshold"], product["delivery_hours"], product["import_days"],
-             product["supplier_url"], product["tags"], product["attributes"], product["featured"],
-             product["best_seller"], product["is_new"]),
+              product["supplier_url"], product["tags"], product["attributes"],
+              product["target_margin_percent"], product["whatsapp_message"], product["featured"],
+              product["best_seller"], product["is_new"]),
         ).lastrowid
         conn.execute(
             "INSERT INTO product_images(product_id,url,alt,sort_order) "
@@ -317,7 +361,9 @@ def product_toggle(request: Request, pid: int) -> Response:
     if not product:
         raise HTTPError(404, "Producto no encontrado")
     new_status = "active" if product["status"] != "active" else "draft"
-    execute("UPDATE products SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (new_status, pid))
+    first_publish = ",published_at=CURRENT_TIMESTAMP" if new_status == "active" and not product["published_at"] else ""
+    execute(f"UPDATE products SET status=?, updated_at=CURRENT_TIMESTAMP{first_publish} WHERE id=?",
+            (new_status, pid))
     audit(request, "toggle", "product", pid, {"status": new_status})
     return go("/admin/products", ok=f"Estado cambiado a {new_status}")
 
@@ -360,6 +406,23 @@ def variant_create(request: Request, pid: int) -> Response:
     return go(f"/admin/products/{pid}/edit", ok="Variante agregada")
 
 
+def variant_update(request: Request, pid: int, variant_id: int) -> Response:
+    variant = one("SELECT * FROM product_variants WHERE id=? AND product_id=?", (variant_id, pid))
+    if not variant:
+        raise HTTPError(404, "Variante no encontrada")
+    name = request.param("name", "").strip()
+    if not name:
+        return go(f"/admin/products/{pid}/edit", error="El nombre de la variante es obligatorio")
+    execute(
+        "UPDATE product_variants SET name=?, sku=?, price_delta_cents=?, stock=?, active=? WHERE id=? AND product_id=?",
+        (name, request.param("sku", "").strip(), _cents(request.param("price_delta")),
+         max(0, request.int_param("stock", 0)),
+         1 if request.param("active") in {"1", "on", "true"} else 0, variant_id, pid),
+    )
+    audit(request, "update", "variant", variant_id, {"name": name})
+    return go(f"/admin/products/{pid}/edit", ok="Variante actualizada")
+
+
 def variant_delete(request: Request, pid: int, variant_id: int) -> Response:
     execute("DELETE FROM product_variants WHERE id=? AND product_id=?", (variant_id, pid))
     audit(request, "delete", "variant", variant_id)
@@ -367,7 +430,6 @@ def variant_delete(request: Request, pid: int, variant_id: int) -> Response:
 
 
 def category_create(request: Request) -> Response:
-    from app.services.catalog import slugify
     name = request.param("name", "").strip()
     if len(name) < 2:
         return go("/admin/products", error="El nombre de la categoría es obligatorio")

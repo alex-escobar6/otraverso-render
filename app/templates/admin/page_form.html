@@ -1,20 +1,24 @@
 <div class="panel">
-  <h2>Editar página: $NAME</h2>
-  <p class="muted">Clave interna: $CODE. Los cambios se guardan en la base de datos y se reflejan en la navegación pública.</p>
+  <h2>Disponibilidad: $NAME</h2>
+  <p class="muted">Clave interna: $CODE · Tipo: $ELEMENT_TYPE · Modificado: $UPDATED · Bloqueado por: $BLOCKED_BY</p>
   <form class="form-grid" method="post" action="/admin/pages/$ID">
     $CSRF
     <div class="field"><label>Nombre</label><input name="name" value="$NAME" maxlength="120" required></div>
-    <div class="field"><label>Ruta</label><select name="route">$ROUTE_OPTIONS</select></div>
+    <div class="field"><label>Ruta real</label>$ROUTE_FIELD</div>
     <div class="field"><label>Universo</label><input name="universe" value="$UNIVERSE" maxlength="80"></div>
     <div class="field"><label>Categoría</label><input name="category" value="$CATEGORY" maxlength="80"></div>
-    <div class="field"><label>Estado</label><select name="status">$STATUS_OPTIONS</select></div>
+    <div class="field"><label>Estado de disponibilidad</label><select name="status">$STATUS_OPTIONS</select></div>
     <div class="field"><label>Orden</label><input name="sort_order" type="number" value="$ORDER"></div>
     <div class="field"><label>Icono</label><input name="icon" value="$ICON" maxlength="80" placeholder="Opcional"></div>
     <div class="field"><label>Imagen</label><input name="image" value="$IMAGE" maxlength="300" placeholder="/uploads/... o https://..."></div>
     <div class="field full"><label>Descripción</label><textarea name="description" rows="2" maxlength="500">$DESCRIPTION</textarea></div>
-    <div class="field full"><label>Mensaje de próximamente</label><textarea name="coming_soon_message" rows="2" maxlength="500">$MESSAGE</textarea></div>
+    <div class="field full"><label>Título del aviso</label><input name="notice_title" value="$NOTICE_TITLE" maxlength="120" placeholder="Ej. Próximamente"></div>
+    <div class="field full"><label>Descripción del aviso</label><textarea name="notice_description" rows="2" maxlength="500">$NOTICE_DESCRIPTION</textarea></div>
+    <div class="field"><label>Texto del botón (solo informativo)</label><input name="notice_button" value="$NOTICE_BUTTON" maxlength="80"></div>
+    <div class="field"><label>Imagen del aviso</label><input name="notice_image" value="$NOTICE_IMAGE" maxlength="300" placeholder="/uploads/... o https://..."></div>
+    <div class="field full"><label>Mensaje heredado de próximamente</label><textarea name="coming_soon_message" rows="2" maxlength="500">$MESSAGE</textarea></div>
     <div class="field full"><label><input type="checkbox" name="nav_visible" value="1"$NAV_CHECKED> Visible en la navegación</label></div>
-    <div class="field full"><button class="btn btn-primary" type="submit">Guardar página</button>
+    <div class="field full"><button class="btn btn-primary" type="submit">Guardar disponibilidad</button>
       <a class="btn" href="/admin/pages">Volver</a></div>
   </form>
 </div>

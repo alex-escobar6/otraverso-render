@@ -17,10 +17,11 @@ from app.db import audit as db_audit
 from app.db import query, settings_group
 from app.security import safe_filename
 from app.services import storage
+from app.services.analytics import dashboard_metrics
 
 SIDEBAR = [
     ("dashboard", "Dashboard", "/admin", "dashboard.view"),
-    ("pages", "Gestión de páginas", "/admin/pages", "pages.manage"),
+    ("pages", "Disponibilidad de páginas", "/admin/pages", "pages.manage"),
     ("products", "Productos", "/admin/products", "products.view"),
     ("inventory", "Inventario", "/admin/inventory", "inventory.view"),
     ("orders", "Pedidos", "/admin/orders", "orders.view"),
@@ -28,6 +29,7 @@ SIDEBAR = [
     ("customers", "Clientes", "/admin/customers", "customers.view"),
     ("marketing", "Marketing", "/admin/marketing", "marketing.edit"),
     ("whatif", "WHAT IF", "/admin/what-if", "whatif.view"),
+    ("draconia", "DRACONIA · compañero 3D", "/admin/draconia", "draconia.manage"),
     ("coverage", "Cobertura", "/admin/coverage", "coverage.manage"),
     ("whatsapp", "WhatsApp", "/admin/settings/whatsapp", "whatsapp.manage"),
     ("settings", "Configuración", "/admin/settings/commercial", "settings.edit"),
@@ -46,10 +48,11 @@ def register(router) -> None:
     router.get("/admin", dashboard, permission="dashboard.view", name="admin.dashboard")
 
     from . import analytics, coverage, customers, inventory, marketing, orders, pages, products, whatif
+    from . import draconia as draconia_admin
     from . import settings as settings_module
     from . import users, backups
     for module in (products, inventory, orders, customers, marketing, whatif, pages, coverage,
-                   settings_module, analytics, users, backups):
+                   settings_module, analytics, users, backups, draconia_admin):
         module.register(router)
 
 
@@ -234,24 +237,7 @@ def logout(request: Request) -> Response:
 
 def dashboard(request: Request) -> Response:
     date_from, date_to = date_bounds(request)
-    params = (date_from, date_to)
-    stats = {
-        "orders": query("SELECT COUNT(*) AS n FROM orders WHERE date(created_at) BETWEEN date(?) AND date(?)", params)[0]["n"],
-        "income": query("SELECT COALESCE(SUM(total_cents),0) AS n FROM orders WHERE status<>'cancelled' AND date(created_at) BETWEEN date(?) AND date(?)", params)[0]["n"],
-        "profit": query(
-            "SELECT COALESCE(SUM((oi.price_cents-COALESCE(p.cost_cents,0))*oi.quantity),0) AS n "
-            "FROM order_items oi JOIN orders o ON o.id=oi.order_id LEFT JOIN products p ON p.id=oi.product_id "
-            "WHERE o.status<>'cancelled' AND date(o.created_at) BETWEEN date(?) AND date(?)", params)[0]["n"],
-        "pending": query("SELECT COUNT(*) AS n FROM orders WHERE status='pending'", ())[0]["n"],
-        "confirmed": query("SELECT COUNT(*) AS n FROM orders WHERE status IN ('confirmed','preparing','shipped')", ())[0]["n"],
-        "stock_products": query("SELECT COUNT(*) AS n FROM products WHERE modality='stock' AND status='active'", ())[0]["n"],
-        "order_products": query("SELECT COUNT(*) AS n FROM products WHERE modality='order' AND status='active'", ())[0]["n"],
-        "low_stock": query("SELECT COUNT(*) AS n FROM products WHERE modality='stock' AND status='active' AND stock<=low_stock_threshold", ())[0]["n"],
-        "clicks": query("SELECT COUNT(*) AS n FROM whatsapp_clicks WHERE date(created_at) BETWEEN date(?) AND date(?)", params)[0]["n"],
-        "requests": query("SELECT COUNT(*) AS n FROM purchase_requests WHERE date(created_at) BETWEEN date(?) AND date(?)", params)[0]["n"],
-        "visits": query("SELECT COUNT(*) AS n FROM visits WHERE date(created_at) BETWEEN date(?) AND date(?)", params)[0]["n"],
-    }
-    stats["conversion"] = round((stats["orders"] / stats["clicks"] * 100) if stats["clicks"] else 0, 1)
+    stats = dashboard_metrics(date_from, date_to)
     top_viewed = query("SELECT name,views FROM products WHERE status='active' ORDER BY views DESC,id LIMIT 5")
     top_sold = query("SELECT name,purchases FROM products WHERE status='active' ORDER BY purchases DESC,id LIMIT 5")
     recent = query(
@@ -260,22 +246,30 @@ def dashboard(request: Request) -> Response:
         "UNION ALL SELECT 'solicitud', 'Solicitud '||code, created_at FROM purchase_requests "
         "ORDER BY created_at DESC LIMIT 8"
     )
+    range_end = datetime.strptime(date_to, "%Y-%m-%d").date()
+    range_start = datetime.strptime(date_from, "%Y-%m-%d").date()
+    if (range_end - range_start).days > 6:
+        range_start = range_end - timedelta(days=6)
     daily = query(
         "SELECT date(created_at) AS day, COUNT(*) AS total FROM visits "
-        "WHERE date(created_at)>=date('now','-6 days') GROUP BY date(created_at) ORDER BY day"
+        "WHERE date(created_at) BETWEEN date(?) AND date(?) GROUP BY date(created_at) ORDER BY day",
+        (range_start.isoformat(), range_end.isoformat()),
     )
     values = {row["day"]: row["total"] for row in daily}
-    days = [(datetime.now().date() - timedelta(days=offset)).isoformat() for offset in range(6, -1, -1)]
+    days = [(range_start + timedelta(days=offset)).isoformat()
+            for offset in range((range_end - range_start).days + 1)]
     peak = max(values.values(), default=1) or 1
     bars = "".join(
         f'<div title="{day}: {values.get(day,0)} visitas" style="height:{max(3, round(values.get(day,0)/peak*100))}%"></div>'
         for day in days
     )
     cards = [
-        ("Ventas (pedidos)", stats["orders"], "en el rango"),
-        ("Ingresos", money(stats["income"]), "pedidos no cancelados"),
-        ("Ganancia estimada", money(stats["profit"]), "precio menos costo"),
-        ("Conversión", f'{stats["conversion"]} %', "pedidos / clics WhatsApp"),
+        ("Pedidos registrados", stats["orders"], "en el rango"),
+        ("Pedidos pagados", stats["paid_orders"], "pago confirmado manualmente"),
+        ("Ingresos", money(stats["income"]), "solo pedidos pagados"),
+        ("Ganancia estimada", money(stats["profit"]), "precio menos costo snapshot"),
+        ("Conversión solicitudes", f'{stats["conversion_requests"]} %', "solicitudes convertidas / clics"),
+        ("Conversión manual", f'{stats["conversion_manual"]} %', "pedidos manuales / clics"),
         ("Pedidos pendientes", stats["pending"], "estado actual"),
         ("Pedidos confirmados", stats["confirmed"], "confirmados, preparación y envío"),
         ("Productos en inventario", stats["stock_products"], "activos"),

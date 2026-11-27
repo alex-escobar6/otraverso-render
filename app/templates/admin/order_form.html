@@ -9,6 +9,10 @@
     <div class="field"><label>Costo de envío (COP)</label><input name="shipping" type="number" min="0" value="0"></div>
     <div class="field"><label>Municipio</label><input name="municipality"></div>
     <div class="field"><label>Dirección</label><input name="address"></div>
+    <div class="field"><label>Método de pago</label><input name="payment_method" placeholder="Ej. Transferencia, efectivo"><small class="hint">Métodos informativos: $PAYMENT_METHODS</small></div>
+    <div class="field"><label>Estado de pago *</label><select name="payment_status">
+      <option value="unpaid" selected>No pagado</option>
+      <option value="paid">Pagado (confirmación manual)</option></select></div>
     <div class="field full"><label>Notas</label><textarea name="notes" rows="2"></textarea></div>
     <div class="field full"><button class="btn btn-primary" type="submit">Crear pedido</button></div>
   </form>

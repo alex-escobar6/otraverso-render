@@ -11,9 +11,9 @@ from pathlib import Path
 from app.config import DATA_DIR, STATIC_DIR, Config
 from app.core.auth import SESSION_COOKIE, check_csrf, load_session, require_permission
 from app.core.http import HTTPError, Request, Response, Router, error_page, json_response
-from app.core.pages import guard_request
+from app.core.pages import UNSAFE_METHODS, guard_request, guard_static_asset
 from app.db import init_db
-from app.modules import admin, play, portal, shop, whatif
+from app.modules import admin, draconia, play, portal, shop, whatif
 from app.services import storage
 from app.services.analytics import track_visit
 
@@ -25,6 +25,7 @@ def create_app() -> Router:
     play.register(router)
     shop.register(router)
     whatif.register(router)
+    draconia.register(router)
     admin.register(router)
     return router
 
@@ -86,6 +87,8 @@ def application(environ, start_response):
             payload = {"ok": True, "status": "ok", "service": "otraverso", "db": Config.DB_BACKEND}
             return json_response(payload, 200)(environ, start_response)
         if request.path.startswith("/static/"):
+            load_session(request)
+            guard_static_asset(request, request.path[len("/static"):])
             return _static(request.path[len("/static"):], STATIC_DIR)(environ, start_response)
         if request.path.startswith("/uploads/"):
             name = request.path[len("/uploads/"):].split("/", 1)[0]
@@ -101,9 +104,9 @@ def application(environ, start_response):
             raise HTTPError(429, "Demasiadas solicitudes. Intente nuevamente en unos segundos", "rate_limited")
 
         load_session(request)
-        if request.method == "POST":
-            check_csrf(request)
         guard_request(request)
+        if request.method in UNSAFE_METHODS:
+            check_csrf(request)
         if method == "GET" and not request.path.startswith("/admin"):
             track_visit(request)
 
@@ -121,7 +124,8 @@ def application(environ, start_response):
             response.body = b""
         return response(environ, start_response)
     except HTTPError as exc:
-        if request.path.startswith("/api/") and exc.status >= 400:
+        is_api = request.path.startswith(("/api/", "/draconia/api/"))
+        if is_api and exc.status >= 400:
             line = f"{datetime.now().isoformat(timespec='seconds')} {exc.status} {request.path} {exc.message}"
             if Config.LOG_TO_STDOUT:
                 print(line, flush=True)
@@ -137,7 +141,7 @@ def application(environ, start_response):
         if exc.code:
             payload["code"] = exc.code
         response = (json_response(payload, exc.status)
-                    if request.path.startswith("/api/") else error_page(exc.status, exc.message))
+                    if is_api else error_page(exc.status, exc.message))
         response.headers["X-Request-ID"] = request.request_id
         return response(environ, start_response)
     except Exception as exc:
@@ -145,7 +149,8 @@ def application(environ, start_response):
         if Config.DEBUG:
             raise
         response = (json_response({"ok": False, "error": "Ocurrió un error inesperado"}, 500)
-                    if request.path.startswith("/api/") else error_page(500, "Ocurrió un error inesperado"))
+                    if request.path.startswith(("/api/", "/draconia/api/"))
+                    else error_page(500, "Ocurrió un error inesperado"))
         response.headers["X-Request-ID"] = request.request_id
         return response(environ, start_response)
 

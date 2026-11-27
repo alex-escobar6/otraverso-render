@@ -7,6 +7,15 @@ from typing import Any
 
 from app.db import query
 
+PUBLIC_PRODUCT_FIELDS = (
+    "id", "category_id", "name", "slug", "short_description", "description", "modality",
+    "status", "price_cents", "compare_price_cents", "stock", "delivery_hours", "import_days",
+    "tags", "attributes", "whatsapp_message", "featured", "best_seller", "is_new",
+    "views", "purchases", "seo_title", "seo_description", "created_at", "updated_at", "published_at",
+)
+PUBLIC_PRODUCT_SELECT = ", ".join(PUBLIC_PRODUCT_FIELDS)
+PUBLIC_PRODUCT_COLUMNS = ", ".join(f"p.{field}" for field in PUBLIC_PRODUCT_FIELDS)
+
 SORT_SQL = {
     "newest": "p.created_at DESC, p.id DESC",
     "price_asc": "p.price_cents ASC, p.id DESC",
@@ -14,6 +23,39 @@ SORT_SQL = {
     "popular": "p.purchases DESC, p.views DESC, p.id DESC",
     "name": "p.name ASC",
 }
+
+
+def parse_cents(value: object) -> int:
+    try:
+        return max(0, int(round(float(str(value or 0).replace(",", ".")) * 100)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def margin_cents(cost_cents: int, price_cents: int) -> int:
+    return max(0, int(price_cents or 0) - int(cost_cents or 0))
+
+
+def margin_percent(cost_cents: int, price_cents: int) -> float:
+    price = int(price_cents or 0)
+    if price <= 0:
+        return 0.0
+    return round(margin_cents(cost_cents, price) / price * 100, 1)
+
+
+def discount_percent(price_cents: int, compare_cents: int) -> float:
+    compare = int(compare_cents or 0)
+    if compare <= 0:
+        return 0.0
+    return round(max(0, compare - int(price_cents or 0)) / compare * 100, 1)
+
+
+def suggested_price(cost_cents: int, target_percent: int) -> int:
+    cost = max(0, int(cost_cents or 0))
+    target = min(100, max(0, int(target_percent or 0)))
+    if target >= 100:
+        return 0
+    return int(round(cost / (1 - target / 100)))
 
 
 def slugify(value: str) -> str:
@@ -94,7 +136,7 @@ def list_products(filters: dict[str, Any], *, limit: int = 12, offset: int = 0) 
     where, params = _where(filters)
     sort = SORT_SQL.get(filters.get("sort", "newest"), SORT_SQL["newest"])
     sql = (
-        "SELECT p.*, c.name AS category_name, "
+        f"SELECT {PUBLIC_PRODUCT_COLUMNS}, c.name AS category_name, "
         "(SELECT url FROM product_images i WHERE i.product_id=p.id ORDER BY i.sort_order,i.id LIMIT 1) AS image "
         "FROM products p LEFT JOIN categories c ON c.id=p.category_id "
         f"WHERE {where} ORDER BY {sort} LIMIT ? OFFSET ?"
@@ -109,7 +151,7 @@ def count_products(filters: dict[str, Any]) -> int:
 
 def get_product_by_slug(slug: str) -> sqlite3.Row | None:
     rows = query(
-        "SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON c.id=p.category_id "
+        f"SELECT {PUBLIC_PRODUCT_COLUMNS}, c.name AS category_name FROM products p LEFT JOIN categories c ON c.id=p.category_id "
         "WHERE p.slug=? AND p.status='active'", (slug,)
     )
     return rows[0] if rows else None
@@ -125,7 +167,7 @@ def product_variants(product_id: int) -> list[sqlite3.Row]:
 
 def related_products(product: sqlite3.Row, limit: int = 4) -> list[sqlite3.Row]:
     explicit = query(
-        "SELECT p.*, (SELECT url FROM product_images i WHERE i.product_id=p.id ORDER BY i.sort_order LIMIT 1) AS image "
+        f"SELECT {PUBLIC_PRODUCT_COLUMNS}, (SELECT url FROM product_images i WHERE i.product_id=p.id ORDER BY i.sort_order LIMIT 1) AS image "
         "FROM product_related pr JOIN products p ON p.id=pr.related_id "
         "WHERE pr.product_id=? AND p.status='active' ORDER BY p.id LIMIT ?",
         (product["id"], limit),
@@ -133,7 +175,7 @@ def related_products(product: sqlite3.Row, limit: int = 4) -> list[sqlite3.Row]:
     if explicit:
         return explicit
     return query(
-        "SELECT p.*, (SELECT url FROM product_images i WHERE i.product_id=p.id ORDER BY i.sort_order LIMIT 1) AS image "
+        f"SELECT {PUBLIC_PRODUCT_COLUMNS}, (SELECT url FROM product_images i WHERE i.product_id=p.id ORDER BY i.sort_order LIMIT 1) AS image "
         "FROM products p WHERE p.status='active' AND p.id<>? AND p.category_id=? ORDER BY p.purchases DESC,p.id DESC LIMIT ?",
         (product["id"], product["category_id"], limit),
     )

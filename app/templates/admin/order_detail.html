@@ -6,10 +6,11 @@
       <tr><td>Entrega</td><td>$ADDRESS</td></tr>
       <tr><td>Fecha</td><td>$CREATED</td></tr>
       <tr><td>Modalidad</td><td>$MODALITY</td></tr>
+      <tr><td>Pago</td><td>$PAYMENT_STATUS · $PAYMENT_METHOD · $PAID_AT</td></tr>
       <tr><td>Notas</td><td>$NOTES</td></tr>
     </table>
     <h3>Productos</h3>
-    <table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Modalidad</th></tr></thead><tbody>$ITEMS</tbody></table>
+    <table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Costo unit.</th><th>Utilidad</th><th>Modalidad</th></tr></thead><tbody>$ITEMS</tbody></table>
     <p style="text-align:right">Subtotal: $SUBTOTAL · Envío: $SHIPPING · <strong>Total: $TOTAL</strong></p>
   </div>
   <div class="panel">
@@ -19,6 +20,13 @@
       <div class="field"><label>Nuevo estado</label><select name="status">$STATUS_OPTIONS</select></div>
       <div class="field"><label>Nota</label><textarea name="note" rows="2"></textarea></div>
       <button class="btn btn-primary btn-sm" type="submit">Actualizar</button>
+    </form>
+    <h3 style="margin-top:1rem">Registro manual de pago</h3>
+    <form method="post" action="/admin/orders/$ORDER_ID/payment">
+      $CSRF
+      <div class="field"><label>Estado de pago</label><select name="payment_status">$PAYMENT_OPTIONS</select></div>
+      <div class="field"><label>Método de pago</label><input name="payment_method" value="$PAYMENT_METHOD"></div>
+      <button class="btn btn-primary btn-sm" type="submit">Guardar pago</button>
     </form>
   </div>
 </div>

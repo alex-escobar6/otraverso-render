@@ -4,6 +4,9 @@ import json
 
 from app.core.auth import public_csrf_token, verify_public_csrf
 from app.core.http import HTTPError, Request, Response, json_response
+from app.core.pages import (
+    element_state, is_admin_preview, is_available, notice_message, play_game_code,
+)
 from app.core.render import esc, render, render_page
 from app.services.play import progress as play_progress
 from app.services.play.catalog import get_game, get_manifest, list_games
@@ -23,23 +26,50 @@ def register(router) -> None:
     router.post("/api/play/v1/progress/collectibles", collectible_api, name="play.api.collectibles")
 
 
-def _game_index() -> str:
+def _availability_notice(code: str) -> str:
+    state = element_state(code)
+    if state["status"] in {"available", "hidden"} or not state["row"]:
+        return ""
+    source = state["blocker"] or state["row"]
+    label = "PRÓXIMAMENTE" if state["status"] == "coming_soon" else "SOLO PRESENTACIÓN"
+    title = source.get("notice_title") or source.get("name") or "Contenido no disponible"
+    description = source.get("notice_description") or source.get("coming_soon_message") or ""
+    return (
+        '<div class="play-availability-notice"><strong>'
+        + esc(label) + " · " + esc(title) + '</strong><span>'
+        + esc(description) + '</span></div>'
+    )
+
+
+def _game_index(request: Request | None = None) -> str:
+    catalog = element_state("play_catalog")
+    preview = is_admin_preview(request) if request is not None else False
+    if not preview:
+        if catalog["status"] == "hidden":
+            return ""
+        if catalog["status"] != "available":
+            return _availability_notice("play_catalog")
     parts = ['<span class="universe-game-index__label">JUEGOS</span>']
     for item in list_games():
-        code = esc(item["code"])
+        code = play_game_code(item["code"])
+        state = element_state(code)
+        if not preview and state["status"] == "hidden":
+            continue
+        available = preview and item["status"] == "published" or state["status"] == "available"
         name = esc(item["name"])
-        status = "DISPONIBLE" if item["status"] == "published" else "PLANEADO"
-        if item["status"] == "published":
+        if available:
             parts.append(
-                f'<button class="universe-game-index__item" type="button" data-play-game="{code}" '
+                f'<button class="universe-game-index__item" type="button" data-play-game="{esc(item["code"])}" '
                 f'data-href="{esc(item["route"])}"><span class="universe-game-index__dot"></span>'
-                f'<span>{name}</span><small>{status}</small></button>'
+                f'<span>{name}</span><small>DISPONIBLE</small></button>'
             )
-        else:
-            parts.append(
-                f'<span class="universe-game-index__item is-planned">'
-                f'<span class="universe-game-index__dot"></span><span>{name}</span><small>{status}</small></span>'
-            )
+            continue
+        label = "PRÓXIMAMENTE" if state["status"] == "coming_soon" else "SOLO PRESENTACIÓN"
+        parts.append(
+            '<span class="universe-game-index__item is-planned">'
+            '<span class="universe-game-index__dot"></span><span>' + name + '</span><small>'
+            + esc(label) + '</small></span>'
+        )
     return "".join(parts)
 
 
@@ -53,18 +83,34 @@ def _game_ui(code: str) -> str:
 
 def _page(request: Request, scene: str, code: str = "nexus-rush", circuit: int = 0,
           title: str = "OTRAVERSO PLAY — NEXUS RUSH", panel: str = "") -> Response:
-    registry = [get_manifest(item["code"]) for item in list_games("published")]
+    preview = is_admin_preview(request)
+    registry = []
+    for item in list_games("published"):
+        if preview or is_available(play_game_code(item["code"])):
+            registry.append(get_manifest(item["code"]))
     game_ui = _game_ui(code) if scene == "game" else ""
-    hub_ui = render("play/hub.html") if scene == "play" else ""
+    hub_ui = ""
+    profile_ui = ""
+    if scene == "play":
+        hub_state = element_state("play_hub")
+        if preview or hub_state["status"] == "available":
+            hub_ui = render("play/hub.html")
+        elif hub_state["status"] != "hidden":
+            hub_ui = _availability_notice("play_hub")
+        profile_state = element_state("play_profile")
+        if preview or profile_state["status"] == "available":
+            csrf = public_csrf_token()
+            profile_ui = render("play/profile.html", PLAY_CSRF=esc(csrf))
+        elif profile_state["status"] != "hidden":
+            profile_ui = _availability_notice("play_profile")
     csrf = public_csrf_token()
-    profile_ui = render("play/profile.html", PLAY_CSRF=esc(csrf)) if scene == "play" else ""
     content = render(
         "play/index.html",
         SCENE=esc(scene),
         CIRCUIT=esc(circuit),
         GAME_CODE=esc(code),
         GAME_REGISTRY=esc(json.dumps(registry, ensure_ascii=False, separators=(",", ":"))),
-        GAME_INDEX=_game_index(),
+        GAME_INDEX=_game_index(request),
         HUB_UI=hub_ui,
         PROFILE_UI=profile_ui,
         GAME_UI=game_ui,
@@ -116,14 +162,33 @@ def game_by_code(request: Request, code: str) -> Response:
     return _page(request, "game", code, 0, f'{item["name"]} — OTRAVERSO PLAY')
 
 
+def _check_game(request: Request, code: str) -> None:
+    if is_admin_preview(request) or not code:
+        return
+    state = element_state(play_game_code(code))
+    if state["status"] == "hidden":
+        raise HTTPError(404, "Juego no disponible", "page_hidden")
+    if state["status"] != "available":
+        raise HTTPError(403, notice_message({"name": code}, state), "game_unavailable")
+
+
 def games_api(request: Request) -> Response:
-    return json_response({"games": list_games()})
+    games = []
+    for item in list_games():
+        state = element_state(play_game_code(item["code"]))
+        if not is_admin_preview(request) and state["status"] == "hidden":
+            continue
+        row = dict(item)
+        row["availability"] = state["status"]
+        games.append(row)
+    return json_response({"games": games})
 
 
 def manifest_api(request: Request, code: str) -> Response:
     manifest = get_manifest(code)
     if not manifest:
         raise HTTPError(404, "Juego no encontrado")
+    _check_game(request, code)
     return json_response({"manifest": manifest})
 
 
@@ -144,6 +209,7 @@ def progress_api(request: Request) -> Response:
 
 def result_api(request: Request) -> Response:
     _require_csrf(request)
+    _check_game(request, request.param("game", ""))
     stats = {}
     raw_stats = request.param("stats", "")
     if raw_stats:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 
 from app.core.http import Request, Response
+from app.core.pages import visibility_for_path
 from app.core.render import esc, render, render_page
 from app.db import query, settings_group
 from app.services.multiverse import (
@@ -23,6 +24,18 @@ UNIVERSE_COPY["portal"] = (
 def register(router) -> None:
     router.get("/", home, name="portal.home")
     router.get("/universos/{code}", universe, name="portal.universe")
+
+
+def _route_visible(route: str | None) -> bool:
+    if not route:
+        return True
+    state = visibility_for_path(route)
+    return state is None or state["visible"]
+
+
+def _visible_planets(meta: dict) -> list[dict]:
+    return [dict(planet) for planet in meta.get("planets", [])
+            if not planet.get("route") or _route_visible(planet["route"])]
 
 
 def _world_node(module, meta: dict) -> str:
@@ -72,7 +85,7 @@ def _world_dialog(module, meta: dict) -> str:
 def _index_item(module, meta: dict) -> str:
     code = module["code"]
     short = esc(meta["short"])
-    enabled = bool(module["enabled"])
+    enabled = bool(module["enabled"]) and _route_visible(meta.get("route"))
     if enabled:
         href = meta.get("route") or ("/shop" if code == "shop" else f"/{code}")
         action = f'href="{esc(href)}" data-warp data-world="{esc(code)}" data-index="{esc(code)}"'
@@ -90,7 +103,7 @@ def _planet_link(planet: dict, enabled: bool) -> str:
     note = esc(planet["note"])
     status = esc(planet["status"])
     kind = esc(planet["type"])
-    if enabled and planet.get("route"):
+    if enabled and planet.get("route") and _route_visible(planet["route"]):
         return (
             f'<a class="universe-planet" href="{esc(planet["route"])}" data-warp '
             f'data-world-planet="{code}" data-world-route="{esc(planet["route"])}" title="{note}">'
@@ -109,7 +122,7 @@ def _planet_link(planet: dict, enabled: bool) -> str:
 
 def _focus_panel(module, meta: dict) -> str:
     code = module["code"]
-    planets = "".join(_planet_link(planet, bool(module["enabled"])) for planet in meta["planets"])
+    planets = "".join(_planet_link(planet, bool(module["enabled"])) for planet in _visible_planets(meta))
     dossier = f"/universos/{code}"
     return f"""
     <div class="galaxy-focus" data-universe-panel="{esc(code)}" hidden role="region"
@@ -133,7 +146,7 @@ def _focus_panel(module, meta: dict) -> str:
 
 def _guide_card(module, meta: dict) -> str:
     code = module["code"]
-    enabled = bool(module["enabled"])
+    enabled = bool(module["enabled"]) and _route_visible(meta.get("route"))
     route = meta.get("route") or f"/universos/{code}"
     action = "data-warp" if enabled else f'data-dialog="{esc(code)}"'
     return f"""
@@ -168,14 +181,18 @@ def home(request: Request) -> Response:
     guides = []
     for module in modules:
         code = module["code"]
-        meta = UNIVERSE_META.get(code)
-        if not meta:
+        source_meta = UNIVERSE_META.get(code)
+        if not source_meta:
             continue
+        meta = dict(source_meta)
+        meta["planets"] = _visible_planets(source_meta)
+        if meta.get("route") and not _route_visible(meta["route"]):
+            meta["route"] = ""
         nodes.append(_world_node(module, meta))
         index.append(_index_item(module, meta))
         panels.append(_focus_panel(module, meta))
         guides.append(_guide_card(module, meta))
-        if not module["enabled"]:
+        if not module["enabled"] or (source_meta.get("route") and not _route_visible(source_meta["route"])):
             dialogs.append(_world_dialog(module, meta))
 
     cards = {card["code"]: card for card in public_cards()}
@@ -187,7 +204,7 @@ def home(request: Request) -> Response:
         if not meta:
             continue
         for planet in meta["planets"]:
-            if planet["code"] == planet_code and planet.get("route"):
+            if planet["code"] == planet_code and planet.get("route") and _route_visible(planet["route"]):
                 featured.append(_featured_link(code, meta, planet))
                 break
 
@@ -226,7 +243,7 @@ def universe(request: Request, code: str) -> Response:
     label, description, _ = UNIVERSE_COPY.get(code, (row["name"], row["description"], ""))
     state = "activo" if row["enabled"] else "planeado y todavía no disponible"
     meta = UNIVERSE_META.get(code, {})
-    planets = "".join(_planet_link(planet, bool(row["enabled"])) for planet in meta.get("planets", []))
+    planets = "".join(_planet_link(planet, bool(row["enabled"])) for planet in _visible_planets(meta))
     content = render("portal/universe.html",
         NAME=esc(row["name"]), LABEL=esc(label), DESCRIPTION=esc(description), STATE=esc(state),
         PLANETS=planets or "<p class=\"hint\">Este universo todavía no tiene mundos declarados.</p>")

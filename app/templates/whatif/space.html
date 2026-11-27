@@ -47,15 +47,44 @@
     </aside>
 
     <main class="wi-stage">
-      <div class="wi-stage__head">
-        <span class="wi-eyebrow" data-wi-chapter-number></span>
-        <h2 data-wi-chapter-title></h2>
-        <p class="wi-date" data-wi-chapter-date></p>
+      <div class="wi-scene-visual">
+        <img class="wi-scene-image" data-wi-scene-image alt="" hidden>
+        <div class="wi-scene-canvas" data-wi-scene-canvas aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
       </div>
-      <article class="wi-prose" data-wi-chapter-content><p>Preparando la historia…</p></article>
+      <div class="wi-stage__head">
+        <span class="wi-eyebrow" data-wi-chapter-number>ESCENA 01</span>
+        <h2 data-wi-chapter-title>Preparando la escena…</h2>
+        <p class="wi-date" data-wi-chapter-date></p>
+        <div class="wi-scene-facts">
+          <div><span>UBICACIÓN</span><strong data-wi-scene-location>—</strong></div>
+          <div><span>FECHA</span><strong data-wi-scene-date>—</strong></div>
+          <div><span>SITUACIÓN</span><strong data-wi-scene-situation>—</strong></div>
+          <div><span>PERSONAJES PRESENTES</span><strong data-wi-scene-characters>—</strong></div>
+          <div><span>ELEMENTOS INTERACTIVOS</span><strong data-wi-scene-elements>—</strong></div>
+        </div>
+      </div>
+      <article class="wi-prose" data-wi-chapter-content><p>Preparando la escena…</p></article>
+      <section class="wi-scene-choices">
+        <div class="wi-scene-choices__head">
+          <span class="wi-eyebrow">AHORA TÚ DECIDES</span>
+          <h3>¿Qué haces?</h3>
+        </div>
+        <div class="wi-action-grid" data-wi-actions></div>
+        <form class="wi-action-form" data-wi-action-form>
+          <input type="hidden" name="csrf" value="$CSRF">
+          <label for="wi-action-text">O escribe una acción libre</label>
+          <textarea id="wi-action-text" name="action" rows="2" maxlength="1200" placeholder="Qué haces, dices, preguntas o cambias"></textarea>
+          <div class="wi-actions wi-action-form__actions">
+            <button class="wi-btn wi-btn--primary" type="submit">ACTUAR</button>
+            <label class="wi-check"><input type="checkbox" name="branch" value="1"> Crear línea alternativa</label>
+          </div>
+        </form>
+      </section>
       <div class="wi-stage__actions">
-        <button class="wi-btn wi-btn--primary" type="button" data-wi-continue>CONTINUAR HISTORIA</button>
-        <button class="wi-btn" type="button" data-wi-generate-image>GENERAR PORTADA</button>
+        <button class="wi-btn wi-btn--primary" type="button" data-wi-continue>AVANZAR LA ESCENA</button>
+        <button class="wi-btn" type="button" data-wi-generate-image>GENERAR IMAGEN DE ESCENA</button>
         <button class="wi-btn wi-btn--ghost" type="button" data-wi-versions>VERSIONES</button>
       </div>
       <section class="wi-detail" data-wi-detail hidden aria-live="polite">
@@ -88,7 +117,7 @@
         <button type="button" data-tab="personajes">Personajes</button>
         <button type="button" data-tab="lugares">Lugares</button>
         <button type="button" data-tab="civilizaciones">Civilizaciones</button>
-        <button type="button" data-tab="misterios">Misterios</button>
+        <button type="button" data-tab="misterios">Descubrimientos</button>
         <button type="button" data-tab="eventos">Acontecimientos</button>
         <button type="button" data-tab="lineas">Líneas</button>
         <button type="button" data-tab="memoria">Memoria</button>

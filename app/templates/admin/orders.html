@@ -2,6 +2,8 @@
   <form class="form-grid" method="get" action="/admin/orders">
     <div class="field"><label>Buscar</label><input name="q" value="$Q" placeholder="Cliente o código"></div>
     <div class="field"><label>Estado</label><select name="status">$STATUS_OPTIONS</select></div>
+    <div class="field"><label>Pago</label><select name="payment_status">$PAYMENT_OPTIONS</select></div>
+    <div class="field"><label>Origen</label><select name="source">$SOURCE_OPTIONS</select></div>
     <div class="field"><label>Desde</label><input type="date" name="from" value="$FROM"></div>
     <div class="field"><label>Hasta</label><input type="date" name="to" value="$TO"></div>
     <div class="field full"><button class="btn btn-primary" type="submit">Filtrar</button>
@@ -9,5 +11,5 @@
   </form>
 </div>
 <div class="panel"><div class="table-wrap"><table>
-  <thead><tr><th>Código</th><th>Cliente</th><th>Fecha</th><th>Modalidad</th><th>Total</th><th>Estado</th></tr></thead>
+  <thead><tr><th>Código</th><th>Cliente</th><th>Fecha</th><th>Modalidad</th><th>Total</th><th>Origen</th><th>Pago</th><th>Estado</th></tr></thead>
   <tbody>$ROWS</tbody></table></div></div>

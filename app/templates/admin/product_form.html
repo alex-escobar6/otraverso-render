@@ -15,6 +15,11 @@
     <div class="field"><label>Precio de venta (COP) *</label><input name="price" type="number" min="1" value="$PRICE" required></div>
     <div class="field"><label>Precio anterior (COP)</label><input name="compare_price" type="number" min="0" value="$COMPARE"></div>
     <div class="field"><label>Costo de adquisición (COP)</label><input name="cost" type="number" min="0" value="$COST"></div>
+    <div class="field"><label>Margen objetivo (%)</label><input name="target_margin_percent" type="number" min="0" max="100" value="$TARGET_MARGIN"></div>
+    <div class="field"><label>Margen actual</label><input value="$MARGIN_COP" readonly><small class="hint">$MARGIN_PERCENT sobre precio de venta</small></div>
+    <div class="field"><label>Descuento frente a precio anterior</label><input value="$DISCOUNT_PERCENT" readonly></div>
+    <div class="field"><label>Precio sugerido (COP)</label><input value="$SUGGESTED_PRICE" readonly><small class="hint">Según costo y margen objetivo</small></div>
+    <div class="field full"><label>Mensaje WhatsApp específico (opcional)</label><textarea name="whatsapp_message" rows="3" maxlength="2000" placeholder="Usa {product}, {price}, {quantity}, {delivery}, {name}">$WHATSAPP_MESSAGE</textarea><small class="hint">Si se deja vacío, se usa la plantilla activa o la configuración general.</small></div>
     <div class="field"><label>Existencia inicial</label><input name="stock" type="number" min="0" value="$STOCK" $EDITING_DISABLED><small class="hint">$STOCK_HINT</small></div>
     <div class="field"><label>Alerta de stock bajo</label><input name="low_stock_threshold" type="number" min="0" value="$THRESHOLD"></div>
     <div class="field"><label>Entrega local (horas)</label><input name="delivery_hours" type="number" min="0" value="$DELIVERY_HOURS"></div>

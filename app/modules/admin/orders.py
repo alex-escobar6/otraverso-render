@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from app.core.http import Request, Response
 from app.core.render import esc, money, render
-from app.db import one, query, transaction
+from app.db import one, query, settings_group, transaction
 from app.services.delivery import zones
-from app.services.orders import convert_request, create_order, list_orders, order_detail, update_status
+from app.services.orders import (
+    convert_request, create_order, list_orders, order_detail, update_payment, update_status,
+)
 from . import admin_page, audit, csrf_input, go, int_or_none
 
 
@@ -15,13 +17,15 @@ def register(router) -> None:
     router.post("/admin/orders/create", order_create, permission="orders.edit", name="admin.order.create")
     router.get("/admin/orders/{oid}", order_view, permission="orders.view", name="admin.order.view")
     router.post("/admin/orders/{oid}/status", order_status, permission="orders.edit", name="admin.order.status")
+    router.post("/admin/orders/{oid}/payment", order_payment, permission="orders.edit", name="admin.order.payment")
     router.get("/admin/requests", requests_list, permission="orders.view", name="admin.requests")
     router.post("/admin/requests/{rid}/convert", request_convert, permission="orders.edit", name="admin.request.convert")
     router.post("/admin/requests/{rid}/close", request_close, permission="orders.edit", name="admin.request.close")
 
 
 def orders_list(request: Request) -> Response:
-    filters = {k: request.query[k] for k in ("status", "modality", "q", "from", "to") if request.query.get(k)}
+    filters = {k: request.query[k] for k in ("status", "modality", "payment_status", "source", "q", "from", "to")
+               if request.query.get(k)}
     rows = list_orders(filters)
     statuses = query("SELECT * FROM order_statuses ORDER BY sort_order")
     body = "".join(
@@ -29,6 +33,8 @@ def orders_list(request: Request) -> Response:
         f'<td>{esc(r["customer_name"] or "—")}</td><td>{r["created_at"][:16]}</td>'
         f'<td>{"Inventario" if r["modality"]=="stock" else "Bajo pedido"}</td>'
         f'<td>{money(r["total_cents"])}</td>'
+        f'<td>{"Manual" if r["source"]=="manual" else "Solicitud"}</td>'
+        f'<td><span class="status-tag {"ok" if r["payment_status"]=="paid" else "warn"}">{"Pagado" if r["payment_status"]=="paid" else "No pagado"}</span></td>'
         f'<td><span class="status-tag {"ok" if r["status"]=="delivered" else ("bad" if r["status"]=="cancelled" else "warn")}">{esc(r["status"])}</span></td></tr>'
         for r in rows
     )
@@ -36,8 +42,17 @@ def orders_list(request: Request) -> Response:
         f'<option value="{s["code"]}"{" selected" if filters.get("status")==s["code"] else ""}>{esc(s["name"])}</option>'
         for s in statuses
     )
-    content = render("admin/orders.html", CSRF=csrf_input(request), ROWS=body or '<tr><td colspan="6">Sin pedidos registrados.</td></tr>',
-                     STATUS_OPTIONS=status_options, Q=esc(filters.get("q", "")),
+    payment_options = "".join(
+        f'<option value="{key}"{" selected" if filters.get("payment_status")==key else ""}>{label}</option>'
+        for key, label in (("", "Pago: todos"), ("unpaid", "No pagados"), ("paid", "Pagados"))
+    )
+    source_options = "".join(
+        f'<option value="{key}"{" selected" if filters.get("source")==key else ""}>{label}</option>'
+        for key, label in (("", "Origen: todos"), ("manual", "Manual"), ("request", "Solicitudes"))
+    )
+    content = render("admin/orders.html", CSRF=csrf_input(request), ROWS=body or '<tr><td colspan="8">Sin pedidos registrados.</td></tr>',
+                     STATUS_OPTIONS=status_options, PAYMENT_OPTIONS=payment_options,
+                     SOURCE_OPTIONS=source_options, Q=esc(filters.get("q", "")),
                      FROM=esc(filters.get("from", "")), TO=esc(filters.get("to", "")))
     return admin_page(request, "Pedidos", content, "orders")
 
@@ -53,7 +68,8 @@ def order_form(request: Request) -> Response:
         f'<option value="{z["id"]}">{esc(z["municipality_name"] + " — " + z["name"])}</option>' for z in zones()
     )
     content = render("admin/order_form.html", CSRF=csrf_input(request), PRODUCT_OPTIONS=product_options,
-                     ZONE_OPTIONS=zones_options)
+                     ZONE_OPTIONS=zones_options,
+                     PAYMENT_METHODS=esc(settings_group("commercial").get("payment_methods", "")))
     return admin_page(request, "Nuevo pedido", content, "orders")
 
 
@@ -78,6 +94,8 @@ def order_create(request: Request) -> Response:
             quantity=max(1, request.int_param("quantity", 1)), zone_id=int_or_none(request.param("zone_id")),
             shipping_cents=int(request.param("shipping", "0") or 0) * 100,
             notes=request.param("notes", ""), user_id=request.user["id"],
+            source="manual", payment_method=request.param("payment_method", ""),
+            payment_status=request.param("payment_status", "unpaid"),
         )
     except Exception as exc:
         from app.core.http import HTTPError
@@ -101,14 +119,23 @@ def order_view(request: Request, oid: int) -> Response:
     )
     item_rows = "".join(
         f'<tr><td>{esc(i["name_snapshot"])}</td><td>{i["quantity"]}</td><td>{money(i["price_cents"])}</td>'
+        f'<td>{money(i["cost_cents"])}</td>'
+        f'<td>{money((i["price_cents"]-i["cost_cents"])*i["quantity"])}</td>'
         f'<td>{"Inventario" if i["modality"]=="stock" else "Bajo pedido"}</td></tr>' for i in items
     )
     history_rows = "".join(
         f'<tr><td>{esc(h["created_at"])}</td><td>{esc(h["from_status"] or "—")}</td><td>{esc(h["to_status"])}</td>'
         f'<td>{esc(h["note"])}</td><td>{esc(h["user_name"] or "Sistema")}</td></tr>' for h in history
     )
+    payment_options = "".join(
+        f'<option value="{key}"{" selected" if order["payment_status"]==key else ""}>{label}</option>'
+        for key, label in (("unpaid", "No pagado"), ("paid", "Pagado (confirmación manual)"))
+    )
     content = render("admin/order_detail.html", CSRF=csrf_input(request), ORDER_ID=str(oid), CODE=esc(order["code"]),
         STATUS=esc(order["status"]), CUSTOMER=esc(order["customer_name"] or "—"),
+        PAYMENT_STATUS="Pagado" if order["payment_status"] == "paid" else "No pagado",
+        PAYMENT_METHOD=esc(order["payment_method"] or "—"), PAID_AT=esc(order["paid_at"] or "—"),
+        PAYMENT_OPTIONS=payment_options,
         PHONE=esc(order["phone"] or ""), EMAIL=esc(order["email"] or ""),
         ADDRESS=esc(order["municipality"] + " " + order["address"]),
         CREATED=esc(order["created_at"]), MODALITY="Inventario" if order["modality"]=="stock" else "Bajo pedido",
@@ -124,30 +151,43 @@ def order_status(request: Request, oid: int) -> Response:
     return go(f"/admin/orders/{oid}", ok="Estado del pedido actualizado")
 
 
+def order_payment(request: Request, oid: int) -> Response:
+    payment_status = request.param("payment_status", "unpaid")
+    if payment_status not in {"unpaid", "paid"}:
+        return go(f"/admin/orders/{oid}", error="Estado de pago no válido")
+    update_payment(oid, payment_status, request.param("payment_method", ""), request.user["id"])
+    audit(request, "payment", "order", oid, {"payment_status": payment_status})
+    return go(f"/admin/orders/{oid}", ok="Registro de pago actualizado")
+
+
 def requests_list(request: Request) -> Response:
     rows = query(
-        "SELECT r.*, p.name AS product_name FROM purchase_requests r LEFT JOIN products p ON p.id=r.product_id "
+        "SELECT r.*, p.name AS product_name, dz.name AS zone_name FROM purchase_requests r "
+        "LEFT JOIN products p ON p.id=r.product_id LEFT JOIN delivery_zones dz ON dz.id=r.zone_id "
         "ORDER BY r.created_at DESC,r.id DESC LIMIT 200"
     )
     body = "".join(
         f'<tr><td>{esc(r["code"])}</td><td>{esc(r["name"])}</td><td>{esc(r["phone"])}</td>'
-        f'<td>{esc(r["product_name"] or "—")}</td><td>{r["quantity"]}</td><td>{r["created_at"][:16]}</td>'
+        f'<td>{esc(r["product_name"] or "—")}</td><td>{esc(r["zone_name"] or "General")}</td>'
+        f'<td>{r["quantity"]}</td><td>{r["created_at"][:16]}</td>'
         f'<td><span class="status-tag {"ok" if r["status"]=="converted" else "warn"}">{esc(r["status"])}</span></td>'
         f'<td><div class="row-actions">'
         f'<form method="post" action="/admin/requests/{r["id"]}/convert">{csrf_input(request)}'
+        f'<input name="shipping" type="number" min="0" value="" placeholder="Tarifa" aria-label="Envío en COP" style="width:90px"> '
         '<button class="btn btn-sm btn-primary" type="submit">Convertir</button></form>'
         f'<form method="post" action="/admin/requests/{r["id"]}/close">{csrf_input(request)}'
         '<button class="btn btn-sm" type="submit">Cerrar</button></form></div></td></tr>'
         for r in rows
     )
-    content = render("admin/requests.html", ROWS=body or '<tr><td colspan="8">Sin solicitudes registradas.</td></tr>')
+    content = render("admin/requests.html", ROWS=body or '<tr><td colspan="9">Sin solicitudes registradas.</td></tr>')
     return admin_page(request, "Solicitudes de compra", content, "requests")
 
 
 def request_convert(request: Request, rid: int) -> Response:
+    raw_shipping = request.param("shipping", "").strip()
+    shipping_cents = int(raw_shipping) * 100 if raw_shipping else None
     try:
-        order_id = convert_request(rid, request.user["id"],
-                                   shipping_cents=int(request.param("shipping", "0") or 0) * 100)
+        order_id = convert_request(rid, request.user["id"], shipping_cents=shipping_cents)
     except Exception as exc:
         from app.core.http import HTTPError
         if isinstance(exc, HTTPError):

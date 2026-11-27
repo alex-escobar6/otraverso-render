@@ -5,9 +5,10 @@ import html
 from datetime import datetime
 from pathlib import Path
 from string import Template
+from urllib.parse import quote
 
 from app.config import TEMPLATE_DIR
-from app.core.pages import page_for_path, public_pages
+from app.core.pages import is_visible, page_banner, public_pages, visibility_for_path
 from app.db import get_setting, modules_enabled, settings_group
 
 
@@ -57,25 +58,24 @@ def render_page(
     request: object = None,
     seo_override: dict[str, str] | None = None,
 ) -> str:
+    from app.core.auth import public_csrf_token
+    from app.services.whatsapp import business_phone, enabled as whatsapp_enabled
+
     commercial = settings_group("commercial")
     visual = settings_group("visual")
     seo = settings_group("seo")
+    wa_settings = settings_group("whatsapp")
     if seo_override:
         seo = {**seo, **{k: v for k, v in seo_override.items() if v}}
     enabled = modules_enabled()
-    whatsapp = commercial.get("whatsapp", "")
-    whatsapp_link = f"https://wa.me/{whatsapp}" if whatsapp else "#"
+    wa_visible = (whatsapp_enabled(wa_settings)
+                  and visual.get("whatsapp_button_visible", "1") == "1")
+    number = business_phone(commercial.get("whatsapp", "")) if wa_visible else ""
+    message = wa_settings.get("default_message", "Hola OTRAVERSO, quiero información sobre sus productos.")
+    whatsapp_link = (f"https://wa.me/{number}?text={quote(message[:1200])}" if number else "#")
     nav = _public_nav(enabled, active, request)
-    footer = _public_footer(commercial, visual, enabled)
-    page = page_for_path(getattr(request, "path", "")) if request is not None else None
-    banner = ""
-    if (page and page["status"] == "coming_soon"
-            and not (getattr(request, "user", None)
-                     and "pages.manage" in getattr(request, "permission_codes", set()))):
-        banner = (
-            '<div class="page-status-banner" role="status"><strong>PRÓXIMAMENTE</strong>'
-            f'<span>{esc(page["coming_soon_message"] or "Esta página aún no está disponible.")}</span></div>'
-        )
+    footer = _public_footer(commercial, visual, enabled, request)
+    banner = page_banner(getattr(request, "path", ""), request) if request is not None else ""
     logo_url = visual.get("logo", "").strip() or "/static/brand/otraverso-logo.svg"
     favicon_url = visual.get("favicon", "").strip() or "/static/favicon.svg"
     return render("base.html",
@@ -98,7 +98,8 @@ def render_page(
         BACKGROUND_COLOR=esc(visual.get("background_color", "#070713")),
         FONT_FAMILY=esc(visual.get("font_family", "system-ui, sans-serif")),
         WHATSAPP_LINK=esc(whatsapp_link),
-        WHATSAPP_VISIBLE="" if visual.get("whatsapp_button_visible", "1") == "1" else "hidden",
+        WHATSAPP_VISIBLE="" if wa_visible and number else "hidden",
+        PUBLIC_CSRF=esc(public_csrf_token() if not getattr(request, "user", None) else ""),
         FOOTER_VISIBLE="" if visual.get("footer_visible", "1") == "1" else "hidden",
         HEAD_EXTRA=head_extra,
         SCRIPTS=scripts,
@@ -112,14 +113,15 @@ def _public_nav(enabled: set[str], active: str, request: object) -> str:
     def link(code: str, label: str, href: str, *, always: bool = False,
              disabled_placeholder: bool = False) -> None:
         row = rows.get(code)
-        if not row or row["nav_visible"] != 1 or row["status"] == "hidden":
+        if not row or row["nav_visible"] != 1 or not is_visible(code):
             return
         if not always and code not in enabled:
             if disabled_placeholder:
                 parts.append(f'<span class="nav-link nav-soon" title="Universo planeado">{label}</span>')
             return
         css = "nav-link active" if active == code else "nav-link"
-        status = " · PRONTO" if row["status"] == "coming_soon" else ""
+        state = "PRONTO" if row["status"] == "coming_soon" else "VER" if row["status"] == "page_only" else ""
+        status = f" · {state}" if state else ""
         parts.append(
             f'<a class="{css}" href="{href}" data-page-code="{esc(code)}" '
             f'data-page-status="{esc(row["status"])}">{label}{status}</a>'
@@ -130,14 +132,19 @@ def _public_nav(enabled: set[str], active: str, request: object) -> str:
     link("play", "PLAY", "/play", always=True)
     link("whatif", "WHAT IF", "/what-if", disabled_placeholder=True)
     parts.append('<span class="nav-link nav-soon" title="Universo planeado">LABS</span>')
-    if request is not None and getattr(request, "user", None):
+    permissions = set(getattr(request, "permission_codes", set())) if request is not None else set()
+    if request is not None and getattr(request, "user", None) and any(
+        code in permissions for code in ("dashboard.view", "products.view", "orders.view", "pages.manage",
+                                         "settings.edit", "whatsapp.manage", "analytics.view")
+    ):
         parts.append('<a class="nav-link nav-admin" href="/admin">Panel</a>')
     else:
         parts.append('<a class="nav-link nav-admin" href="/admin/login">Admin</a>')
     return "".join(parts)
 
 
-def _public_footer(commercial: dict[str, str], visual: dict[str, str], enabled: set[str]) -> str:
+def _public_footer(commercial: dict[str, str], visual: dict[str, str], enabled: set[str],
+                   request: object = None) -> str:
     social = []
     for key, label in (("social_instagram", "Instagram"), ("social_facebook", "Facebook"), ("social_tiktok", "TikTok")):
         url = commercial.get(key, "").strip()
@@ -146,10 +153,16 @@ def _public_footer(commercial: dict[str, str], visual: dict[str, str], enabled: 
     pages = [
         ('/shop/cobertura', 'Cobertura y entregas'),
         ('/pages/condiciones', 'Condiciones de compra'),
+        ('/pages/pagos', 'Métodos de pago'),
         ('/pages/privacidad', 'Privacidad'),
         ('/pages/devoluciones', 'Cambios y devoluciones'),
     ]
-    links = "".join(f'<a href="{href}">{label}</a>' for href, label in pages)
+    visible_pages = []
+    for href, label in pages:
+        state = visibility_for_path(href)
+        if state is None or state["visible"]:
+            visible_pages.append((href, label))
+    links = "".join(f'<a href="{href}">{label}</a>' for href, label in visible_pages)
     social_html = " · ".join(social)
     return f"""
     <div class="footer-grid">

@@ -15,8 +15,8 @@ from app.services.whatif import engine, options, provider
 PREFIX = "/what-if"
 API = "/api/what-if/v1"
 ASSETS = (
-    '<link rel="stylesheet" href="/static/whatif/1.0.2/whatif.css?v=20261125f">',
-    '        <script src="/static/whatif/1.0.2/whatif.js?v=20261125f" defer></script>',
+    '<link rel="stylesheet" href="/static/whatif/1.0.2/whatif.css?v=20261126b">',
+    '        <script src="/static/whatif/1.0.2/whatif.js?v=20261126b" defer></script>',
 )
 
 
@@ -39,6 +39,7 @@ def register(router) -> None:
     router.get(API + "/realities/{rid}", state_api, name="whatif.api.state")
     router.post(API + "/realities/{rid}/modes", modes_api, name="whatif.api.modes")
     router.post(API + "/realities/{rid}/chapter", chapter_api, name="whatif.api.chapter")
+    router.post(API + "/realities/{rid}/turn", turn_api, name="whatif.api.turn")
     router.post(API + "/realities/{rid}/chapter/{cid}/edit", edit_api, name="whatif.api.edit")
     router.post(API + "/realities/{rid}/chapter/{cid}/regenerate", regenerate_api, name="whatif.api.regenerate")
     router.get(API + "/realities/{rid}/chapter/{cid}/versions", versions_api, name="whatif.api.versions")
@@ -143,10 +144,19 @@ def _page(request: Request, template: str, title: str, **context: Any) -> Respon
 
 
 def _ideas() -> str:
-    return "".join(
+    templates = []
+    for item in options.SIMULATION_TEMPLATES:
+        templates.append(
+            f'<button type="button" class="wi-idea wi-idea--template" data-idea="{esc(item["idea"])}" '
+            f'data-mode="{esc(item["mode"])}" data-genre="{esc(item["genre"])}" '
+            f'data-style="{esc(item["style"])}"><span>{esc(item["label"])}</span>'
+            f'<small>{esc(item["idea"])}</small></button>'
+        )
+    templates.extend(
         f'<button type="button" class="wi-idea" data-idea="{esc(text)}">{esc(text)}</button>'
         for text in options.INSPIRATION
     )
+    return "".join(templates)
 
 
 def _choices(items: tuple[dict, ...], name: str, selected: str) -> str:
@@ -345,6 +355,17 @@ def chapter_api(request: Request, rid: str) -> Response:
     return _result(lambda: engine.generate_chapter(
         owner, _rid(rid), _int(request.param("timeline")) or engine.get_state(owner, _rid(rid))["timeline_id"],
         direction=request.param("direction"), idempotency_key=request.param("idempotency_key"),
+    ))
+
+
+def turn_api(request: Request, rid: str) -> Response:
+    owner = _owner(request)
+    reality_id = _rid(rid)
+    timeline_id = _int(request.param("timeline")) or engine.get_state(owner, reality_id)["timeline_id"]
+    branch = request.param("branch").strip().lower() in {"1", "true", "on", "si", "sí"}
+    return _result(lambda: engine.generate_turn(
+        owner, reality_id, timeline_id, action=request.param("action"), branch=branch,
+        idempotency_key=request.param("idempotency_key"),
     ))
 
 

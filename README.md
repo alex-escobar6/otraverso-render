@@ -93,4 +93,5 @@ tests/        Suite de integración con BD temporal
 - `docs/FASES.md`
 - `docs/DESPLIEGUE.md`
 - `docs/SEGURIDAD.md`
+- `docs/WHATSAPP.md`
 - `docs/whatif/README.md`, `docs/whatif/API.md`, `docs/whatif/OPERACION.md`

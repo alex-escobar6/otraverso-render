@@ -7,6 +7,7 @@
   var FAVORITES_KEY = 'otraverso.whatif.ideas.favorites.v1';
   var HANDOFF_KEY = 'otraverso.whatif.idea.handoff.v1';
   var HOME_EXAMPLES = [
+    'Viajar al año 30 d. C., en Judea, con conocimientos de la historia futura',
     '¿Y si los dinosaurios nunca se hubieran extinguido?',
     '¿Y si Roma nunca hubiera caído?',
     '¿Y si la humanidad descubriera vida inteligente en Marte?',
@@ -21,7 +22,7 @@
   var EXPLORE_TABS = ['mundo', 'historia', 'cronologia', 'personajes', 'lugares', 'civilizaciones', 'misterios', 'eventos', 'lineas', 'memoria'];
   var SECTION_LABELS = {
     world: 'Mundo', history: 'Historia', chronology: 'Cronología', characters: 'Personajes',
-    places: 'Lugares', civilizations: 'Civilizaciones', mysteries: 'Misterios', events: 'Acontecimientos',
+    places: 'Lugares', civilizations: 'Civilizaciones', mysteries: 'Descubrimientos', events: 'Acontecimientos',
     timelines: 'Líneas', culture: 'Cultura', technology: 'Tecnología', economy: 'Economía',
     religions: 'Religiones', species: 'Especies', flora: 'Flora', fauna: 'Fauna',
     customs: 'Costumbres', conflicts: 'Conflictos'
@@ -647,6 +648,70 @@
     return 'normal';
   }
 
+  function modeFlags(mode) {
+    var value = String(mode || 'normal').toLowerCase();
+    return {
+      apocalypse: value.indexOf('apocalip') >= 0 || value.indexOf('combinad') >= 0 ? '1' : '0',
+      crazy: value.indexOf('loco') >= 0 || value.indexOf('crazy') >= 0 || value.indexOf('combinad') >= 0 ? '1' : '0',
+      unlimited: value.indexOf('sin-limit') >= 0 || value.indexOf('sin limit') >= 0 || value.indexOf('unlimit') >= 0 ? '1' : '0',
+      chapter_length: 'escena',
+      point_of_view: 'segunda persona'
+    };
+  }
+
+  function presetFromButton(button) {
+    if (!button || !button.dataset) return {};
+    return { mode: button.dataset.mode || '', genre: button.dataset.genre || '', style: button.dataset.style || '' };
+  }
+
+  function proposalPayload(proposal, preset) {
+    var source = narrativeConfigFrom(proposal || {});
+    var settings = preset || {};
+    var config = Object.assign({}, source, modeFlags(settings.mode));
+    config.chapter_length = 'escena';
+    var payload = {};
+    ['title', 'premise', 'description', 'genre', 'style', 'depth', 'format', 'recommendation', 'first_scene'].forEach(function (key) {
+      if (source[key]) payload[key] = source[key];
+    });
+    var rules = Array.isArray(source.rules) ? source.rules : [];
+    payload.rules = JSON.stringify(rules.map(function (rule) {
+      return typeof rule === 'string' ? { text: rule, kind: 'established' } : rule;
+    }));
+    payload.characters = JSON.stringify(Array.isArray(source.characters) ? source.characters : []);
+    payload.locations = JSON.stringify(Array.isArray(source.locations) ? source.locations : []);
+    payload.narrative_config = JSON.stringify(pickConfig(config));
+    CONFIG_FIELDS.forEach(function (key) {
+      if (config[key] !== undefined && config[key] !== null) payload[key] = config[key];
+    });
+    return payload;
+  }
+
+  async function launchIdea(text, preset, trigger) {
+    var clean = String(text || '').trim();
+    if (!clean) return;
+    var settings = preset || {};
+    var key = 'launch-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+    var payload = { idea: clean, chapter_length: 'escena', idempotency_key: key };
+    ['genre', 'style', 'depth', 'format'].forEach(function (field) {
+      if (settings[field]) payload[field] = settings[field];
+    });
+    var flags = modeFlags(settings.mode);
+    Object.keys(flags).forEach(function (field) { payload[field] = flags[field]; });
+    if (trigger) busy(trigger, true, 'ABRIENDO…');
+    try {
+      var prepared = await request('/proposals', payload, 'POST', true, { operation: 'Preparar simulación' });
+      var created = await request(
+        '/realities',
+        Object.assign(proposalPayload(prepared.proposal, settings), { idempotency_key: key + ':realities' }),
+        'POST', true, { operation: 'Crear simulación' }
+      );
+      window.location.href = '/what-if/espacio/' + created.reality.id;
+    } catch (error) {
+      message(error.message, true);
+      if (trigger) busy(trigger, false);
+    }
+  }
+
   function storeHandoff(text, autostart) {
     var payload = {
       text: text,
@@ -660,6 +725,10 @@
   function setupIdeaButtons() {
     qsa('[data-idea]').forEach(function (button) {
       button.addEventListener('click', function () {
+        if (button.closest('#ejemplos') && qs('[data-wi-hero-form]')) {
+          launchIdea(button.dataset.idea, presetFromButton(button), button);
+          return;
+        }
         var field = qs('[data-wi-hero-idea]') || qs('#wi-idea');
         if (field) {
           field.value = button.dataset.idea;
@@ -704,11 +773,7 @@
       if (!field) return;
       var text = (field.value || '').trim() || currentExample();
       field.value = text;
-      if (!storeHandoff(text, true)) {
-        message('No se pudo guardar la idea en este navegador.', true);
-        return;
-      }
-      window.location.href = '/what-if/crear';
+      launchIdea(text, { mode: document.body.dataset.wiMode || 'normal' }, qs('[data-wi-discover]', form));
     });
     var surprise = qs('[data-wi-home-surprise]');
     if (surprise) surprise.addEventListener('click', async function () {
@@ -724,11 +789,10 @@
         }, 'POST', true, { operation: 'Idea sorpresa' });
         var idea = (data.ideas || [])[0];
         if (!idea) throw new Error('No se obtuvo ninguna idea. Inténtalo de nuevo.');
-        if (field) {
-          field.value = ideaText(idea);
-          field.focus();
-        }
-        message('Idea sorpresa cargada. Puedes editarla antes de abrir el mundo.');
+        var text = ideaText(idea);
+        if (field) field.value = text;
+        busy(surprise, false);
+        launchIdea(text, { mode: ideaMode() }, surprise);
       } catch (error) { message(error.message, true); }
       finally { busy(surprise, false); }
     });
@@ -1382,6 +1446,10 @@
           body.appendChild(element('div', 'wi-prose__separator', '◆'));
           return;
         }
+        if (/^[-*•]\s+/.test(text)) {
+          body.appendChild(element('p', 'wi-prose__bullet', text.replace(/^[-*•]\s+/, '').replace(/\*\*/g, '')));
+          return;
+        }
         if (/^#{1,4}\s+/.test(text)) {
           body.appendChild(element('h3', 'wi-prose__section', text.replace(/^#{1,4}\s+/, '')));
           return;
@@ -1392,6 +1460,104 @@
         }
         body.appendChild(element('p', '', text));
       });
+    }
+  }
+
+  function namesFrom(rows, limit) {
+    return (Array.isArray(rows) ? rows : []).filter(function (row) {
+      return row && (typeof row === 'string' || row.name || row.title);
+    }).slice(0, limit).map(function (row) {
+      return typeof row === 'string' ? row : String(row.name || row.title);
+    });
+  }
+
+  function renderSceneActions(actions) {
+    var box = qs('[data-wi-actions]');
+    if (!box) return;
+    var rows = Array.isArray(actions) && actions.length ? actions : [
+      'Observar el entorno antes de moverte',
+      'Hablar con alguien presente',
+      'Buscar una pista concreta',
+      'Hacer algo inesperado'
+    ];
+    box.textContent = '';
+    rows.slice(0, 5).forEach(function (text, index) {
+      var action = String(text || '').trim();
+      if (!action) return;
+      var button = element('button', 'wi-btn wi-btn--action', String(index + 1).padStart(2, '0') + ' · ' + action);
+      button.type = 'button';
+      button.dataset.wiAction = action;
+      box.appendChild(button);
+    });
+  }
+
+  function applySceneImage(data) {
+    var image = qs('[data-wi-scene-image]');
+    var canvas = qs('[data-wi-scene-canvas]');
+    if (!image) return;
+    var assets = Array.isArray(data.assets) ? data.assets : [];
+    var asset = null;
+    if (data.reality && data.reality.cover_asset_id) {
+      asset = assets.filter(function (row) { return String(row.id) === String(data.reality.cover_asset_id); })[0] || { id: data.reality.cover_asset_id };
+    }
+    if (!asset) asset = assets.filter(function (row) { return String(row.kind) === 'cover'; })[0];
+    if (!asset) {
+      var located = (Array.isArray(data.locations) ? data.locations : []).filter(function (row) { return row && row.image_asset_id; })[0];
+      if (located) asset = { id: located.image_asset_id };
+    }
+    if (asset && asset.id) {
+      image.src = API + '/assets/' + encodeURIComponent(asset.id) + '?guest=' + encodeURIComponent(guestToken);
+      image.alt = (data.reality && data.reality.title) || 'Escena de la realidad';
+      image.hidden = false;
+      if (canvas) canvas.hidden = true;
+    } else {
+      image.removeAttribute('src');
+      image.hidden = true;
+      if (canvas) canvas.hidden = false;
+    }
+  }
+
+  function renderScene(data) {
+    var simulation = data.simulation || {};
+    var chapter = data.chapter || {};
+    var sceneNumber = Number(simulation.scene_number || chapter.number || 1);
+    var characters = Array.isArray(simulation.characters_present) && simulation.characters_present.length
+      ? simulation.characters_present : namesFrom(data.characters, 3);
+    var elements = Array.isArray(simulation.interactive_elements) && simulation.interactive_elements.length
+      ? simulation.interactive_elements : namesFrom(data.locations, 3).concat(namesFrom(data.events, 2));
+    var location = simulation.location || namesFrom(data.locations, 1)[0] || 'Lugar por determinar';
+    setText('[data-wi-chapter-number]', 'ESCENA ' + String(sceneNumber).padStart(2, '0'));
+    setText('[data-wi-chapter-date]', simulation.narrative_date || chapter.narrative_date || '');
+    setText('[data-wi-scene-location]', location);
+    setText('[data-wi-scene-date]', simulation.narrative_date || chapter.narrative_date || 'Fecha por confirmar');
+    setText('[data-wi-scene-situation]', simulation.situation || chapter.summary || 'La escena acaba de comenzar.');
+    setText('[data-wi-scene-characters]', characters.length ? characters.join(' · ') : 'Nadie visible todavía');
+    setText('[data-wi-scene-elements]', elements.length ? elements.slice(0, 4).join(' · ') : 'Elementos por descubrir');
+    renderSceneActions(simulation.suggested_actions || data.suggested_actions || []);
+    applySceneImage(data);
+  }
+
+  async function runTurn(text, branch, trigger) {
+    if (!state) {
+      message('La realidad todavía se está cargando. Inténtalo de nuevo.', true);
+      return;
+    }
+    if (trigger) busy(trigger, true, 'SIMULANDO…');
+    try {
+      var data = await request('/realities/' + state.reality.id + '/turn', {
+        action: text || '',
+        timeline: state.timeline_id,
+        branch: branch ? 1 : 0,
+        idempotency_key: 'turn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+      }, 'POST', true, { operation: 'Avanzar escena' });
+      activeChapterId = data.chapter && data.chapter.id || 0;
+      renderState(data);
+      dramaPulse();
+      message('Escena guardada. El mundo ha respondido y recuerda tu decisión.');
+    } catch (error) {
+      message(error.message, true);
+    } finally {
+      if (trigger) busy(trigger, false);
     }
   }
 
@@ -1573,6 +1739,7 @@
     if (data.progress) renderProgress(data.progress); else clearProgress();
     fillConfigInputs(qs('[data-wi-modes-form]'), config);
     renderChapter(data.chapter);
+    renderScene(data);
     renderList(qs('[data-wi-chapters]'), data.chapters || [], function (chapter) {
       var item = element('div', 'wi-list__item' + (data.chapter && chapter.id === data.chapter.id ? ' is-active' : ''));
       item.appendChild(element('strong', '', chapter.number + '. ' + chapter.title));
@@ -1784,32 +1951,29 @@
     loadSpace();
 
     var continueButton = qs('[data-wi-continue]');
-    if (continueButton) continueButton.addEventListener('click', async function () {
-      busy(continueButton, true, 'GENERANDO CAPÍTULO…');
-      message('Preparando contexto…');
-      try {
-        if (!state) throw new Error('La realidad todavía se está cargando. Inténtalo de nuevo.');
-        var data = await request('/realities/' + state.reality.id + '/chapter', {
-          timeline: state.timeline_id,
-          idempotency_key: 'chapter-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
-        });
-        var info = jobInfoFrom(data);
-        if (info.id) {
-          message('Capítulo en la cola de generación. Siguiendo el hilo de la historia…');
-          var finished = await pollJob(info.id);
-          if (finished && finished.error) throw new Error(finished.error);
-          clearProgress();
-          activeChapterId = 0;
-          await loadSpace();
-        } else {
-          activeChapterId = data.chapter && data.chapter.id || activeChapterId;
-          await loadSpace(activeChapterId);
-        }
-        message('Capítulo guardado con continuidad y memoria actualizada.');
-      } catch (error) {
-        clearProgress();
-        message(error.message, true);
-      } finally { busy(continueButton, false); }
+    if (continueButton) continueButton.addEventListener('click', function () {
+      runTurn('', false, continueButton);
+    });
+
+    var actions = qs('[data-wi-actions]');
+    if (actions) actions.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-wi-action]');
+      if (button) runTurn(button.dataset.wiAction, false, button);
+    });
+
+    var actionForm = qs('[data-wi-action-form]');
+    if (actionForm) actionForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var field = qs('textarea[name="action"]', actionForm);
+      var branch = qs('input[name="branch"]', actionForm);
+      var button = qs('button[type="submit"]', actionForm);
+      var text = field ? field.value.trim() : '';
+      if (!text) {
+        message('Escribe una acción para que el mundo pueda responder.', true);
+        return;
+      }
+      if (field) field.value = '';
+      runTurn(text, Boolean(branch && branch.checked), button);
     });
 
     var surprise = qs('[data-wi-surprise]');

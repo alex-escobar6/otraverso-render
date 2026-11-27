@@ -1,0 +1,25 @@
+<section class="panel">
+<h2>Preferencias iniciales</h2>
+<p>Estos valores se aplican solo a nuevos compañeros. Cada persona puede ajustar los suyos desde su espacio.</p>
+<form method="post" action="/admin/draconia/save">
+$CSRF
+<label for="draconia-name">Nombre inicial del dragón</label>
+<input id="draconia-name" name="name" maxlength="40" value="$NAME" required>
+<label><input type="checkbox" name="sound" value="1"$SOUND_CHECKED> Sonido activado</label>
+<label><input type="checkbox" name="reduced_motion" value="1"$REDUCED_CHECKED> Movimiento reducido</label>
+<button class="btn btn-primary" type="submit">Guardar</button>
+</form>
+</section>
+<section class="panel" style="margin-top:1.2rem">
+<h2>Compañeros</h2>
+<p>Total: $TOTAL</p>
+<table class="table">
+<thead><tr><th>Persona</th><th>Dragón</th><th>Estado</th></tr></thead>
+<tbody>$ROWS</tbody>
+</table>
+</section>
+<section class="panel" style="margin-top:1.2rem">
+<h2>Capacidades de la escena</h2>
+<p><strong>Estados:</strong> $STATES</p>
+<p><strong>Animaciones:</strong> $ANIMATIONS</p>
+</section>

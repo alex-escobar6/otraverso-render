@@ -25,4 +25,30 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!window.confirm(form.dataset.confirm)) event.preventDefault();
     });
   });
+
+  document.querySelectorAll('a[data-wa-log]').forEach(function (link) {
+    link.addEventListener('click', function (event) {
+      var csrf = link.dataset.waCsrf || '';
+      if (!csrf || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+      event.preventDefault();
+      var body = new URLSearchParams({
+        csrf: csrf,
+        source: link.dataset.waLog,
+        path: window.location.pathname,
+        url: link.dataset.waUrl || link.href,
+        message: link.dataset.waMessage || ''
+      });
+      var navigate = function () { window.location.assign(link.href); };
+      if (window.fetch) {
+        window.fetch('/shop/whatsapp/click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body,
+          keepalive: true
+        }).then(navigate, navigate);
+      } else {
+        navigate();
+      }
+    });
+  });
 });

@@ -71,7 +71,7 @@ TOPICS = (
         {
             "title": "El archivo de los sueños",
             "rules": (
-                "Los sueños pueden compartirse y dejar registros verificables.",
+                "Los sueños pueden compartirse y dejar huellas verificables.",
                 "Lo soñado no cambia el pasado, pero sí altera recuerdos y decisiones futuras.",
                 "Nadie controla por completo el contenido de una mente ajena.",
             ),
@@ -108,6 +108,40 @@ TOPICS = (
             "scene": "El viajero vuelve una mañana tarde y descubre que su propia casa ya no lo reconoce.",
         },
     ),
+    (
+        ("judea", "jesús", "jesus", "año 30", "imperio romano"),
+        {
+            "title": "Judea, año 30 d. C.",
+            "rules": (
+                "La escena ocurre en Judea bajo el dominio del Imperio romano y respeta sus costumbres.",
+                "Quien llega del futuro conoce los acontecimientos, pero no puede demostrarlos con objetos de su época.",
+                "Cada intento de advertir a alguien deja una consecuencia irreversible.",
+            ),
+            "characters": (
+                ("María", "Comerciante de la caravana", "Prudente y curiosa", "Entender de dónde viene el viajero"),
+                ("Simón", "Guardia del templo", "Desconfiado y leal", "Impedir que se altere el orden del lugar"),
+            ),
+            "locations": (
+                ("Camino de Jerusalén", "ruta", "Un sendero polvoriento al amanecer, entre tiendas y mercancías."),
+                ("Puesto de la caravana", "asentamiento", "Tiendas bajas donde se intercambian noticias y provisiones."),
+            ),
+            "scene": "Una caravana se detiene al amanecer y una mujer mira a quien acaba de llegar como si supiera que no pertenece a ese año.",
+        },
+    ),
+    (
+        ("futurista", "civilización futura", "ciudad futura"),
+        {
+            "title": "La ciudad que aprendió a recordar",
+            "rules": (
+                "La civilización futurista ha convertido la memoria en una infraestructura visible.",
+                "Toda identidad puede verificarse, pero nadie puede borrar por completo un recuerdo compartido.",
+                "La tecnología resuelve necesidades concretas y crea nuevas desigualdades.",
+            ),
+            "characters": (("Ine", "Técnica de pasarelas", "Precavida y observadora", "Encontrar un nombre ausente en la red"),),
+            "locations": (("Avenida de las Memorias", "ciudad", "Una pasarela luminosa donde los recuerdos se muestran en las paredes."),),
+            "scene": "Una ciudad perfecta reconoce el cuerpo de quien acaba de llegar, pero no recuerda su nombre.",
+        },
+    ),
 )
 
 MOVES = (
@@ -119,7 +153,7 @@ MOVES = (
     },
     {
         "title": "Lo que la memoria guardó",
-        "opening": "Los registros coincidían en una sola palabra: inconsistencia",
+        "opening": "Dos versiones coincidían en una sola palabra: inconsistencia",
         "turn": "{character} comprendió que {place} no era un escenario, sino una prueba",
         "end": "La conversación terminó con una decisión que nadie había escrito todavía",
     },
@@ -353,8 +387,8 @@ def local_proposal(payload: dict) -> dict:
         fmt = options.recommend_format(idea, genre, style, depth)
     premise = idea if "?" in idea else f"¿Qué pasaría si {idea.rstrip('.')}?"
     description = (
-        f"Una {genre_label.lower()} de tono {style_label.lower()} que sigue las consecuencias de esta premisa "
-        "con personajes, lugares y decisiones que permanecen coordinados en el tiempo."
+        f"Imagina que entras en una {genre_label.lower()} de tono {style_label.lower()}. "
+        f"{topic['scene']} Lo que hagas a continuación quedará guardado y cambiará lo que viene."
     )
     return {
         "title": _derive_title(idea, topic),
@@ -375,63 +409,6 @@ def local_proposal(payload: dict) -> dict:
         ],
         "first_scene": topic["scene"],
         "recommendation": "Formato " + options.label_for(options.FORMATS, fmt).lower() + ": mantiene la continuidad y permite intervenir cuando quieras.",
-    }
-
-
-def local_chapter(payload: dict) -> dict:
-    context = payload.get("context") if isinstance(payload.get("context"), dict) else {}
-    number = max(1, int(payload.get("number") or 1))
-    move = MOVES[(number - 1) % len(MOVES)]
-    rules = [str(item) for item in _as_list(context.get("rules"))[:3]]
-    characters = [item for item in _as_list(context.get("characters")) if isinstance(item, dict)]
-    locations = [item for item in _as_list(context.get("locations")) if isinstance(item, dict)]
-    character = str(characters[0].get("name") or "quien observa") if characters else "quien observa"
-    place = str(locations[0].get("name") or "el lugar de los hechos") if locations else "el lugar de los hechos"
-    rule = rules[0] if rules else "la premisa elegida sigue siendo cierta"
-    previous = _as_text(context.get("previous_summary"), 300) or "Nadie había puesto en palabras lo que estaba cambiando."
-    last_event = _as_text(context.get("last_event"), 300)
-    direction = _as_text(payload.get("direction"), 400)
-    premise = _as_text(context.get("premise"), 300)
-    scene = _as_text(context.get("first_scene"), 300)
-    opening = f"{move['opening']}. {scene if number == 1 else previous}"
-    turn = move["turn"].format(character=character, place=place) + f". La regla sigue en pie: {rule}."
-    if direction:
-        turn += f" La intervención reciente cambia el rumbo: {direction}."
-    consequence = move["end"]
-    if last_event:
-        consequence += f" El antecedente inmediato fue que {last_event}."
-    closing = (
-        "La escena no respondía todas las preguntas, pero dejaba una forma concreta de continuar. "
-        "Cada decisión ahora pertenecía a la historia y no solo a la hipótesis inicial."
-    )
-    content = "\n\n".join((opening, turn, consequence, closing))
-    date = f"Ciclo {number}"
-    summary = f"{character} se enfrenta a una consecuencia imprevista en {place}; {consequence.lower()}"
-    return {
-        "title": f"{number:02d}. {move['title']}",
-        "content": content[:9000],
-        "summary": summary,
-        "narrative_date": date,
-        "events": [
-            {
-                "title": f"Confirmación en {place}" if number % 2 else f"Decisión de {character}",
-                "description": turn,
-                "narrative_date": date,
-                "consequences": consequence,
-            },
-            {
-                "title": "Pregunta pendiente",
-                "description": closing,
-                "narrative_date": date,
-                "consequences": "La continuación deberá responder qué hacer con esa pregunta.",
-            },
-        ],
-        "state_updates": {"current_situation": consequence, "characters": [], "locations": []},
-        "memories": [
-            {"kind": "chapter", "content": summary, "confidence": "confirmed", "importance": 7},
-            {"kind": "current", "content": consequence, "confidence": "confirmed", "importance": 10},
-        ],
-        "proposed_rules": [] if number % 3 else [{"text": f"La consecuencia {number} obliga a revisar {premise or 'la premisa'}.", "kind": "hypothesis"}],
     }
 
 
@@ -492,9 +469,9 @@ def local_intervention(payload: dict) -> dict:
         "intent": intent,
         "summary": _as_text(text, 300),
         "consequences": [
-            "El estado anterior queda guardado como versión recuperable.",
-            "Solo se aplicarán cambios estructurados permitidos por el motor.",
-            "La memoria narrativa se actualizará después de aplicar la intervención.",
+            "La escena anterior queda guardada y puede recuperarse desde el historial.",
+            "El cambio se aplica a la estructura de la realidad, no solo a una frase del texto.",
+            "Los personajes y lugares reaccionarán a este hecho en la siguiente escena.",
         ],
         "branch_required": branch_required,
         "changes": changes,
@@ -610,7 +587,7 @@ def _validate_chapter(data: dict, number: int, config: dict | None = None) -> di
     plan = narrative.chapter_plan(config or {})
     configured = provider.setting_int("max_chapter_chars", 36000, 600, 200000)
     max_chars = max(configured, plan["total_words"] * 8)
-    content = options.clean_text(data.get("content"), max_chars, paragraphs=True)
+    content = options.clean_narrative(data.get("content"), max_chars, paragraphs=True)
     if len(content) < 80:
         raise provider.ProviderError("La respuesta narrativa era demasiado corta. Puedes reintentar sin perder el estado.", 502)
     events = []
@@ -645,10 +622,10 @@ def _validate_chapter(data: dict, number: int, config: dict | None = None) -> di
             importance = 5
         memories.append({"kind": kind, "content": content_memory, "confidence": confidence, "importance": importance})
     return {
-        "title": _as_text(data.get("title"), 140) or f"Capítulo {number}",
+        "title": options.clean_narrative(data.get("title"), 140) or f"Capítulo {number}",
         "content": content,
-        "summary": _as_text(data.get("summary"), 500) or content[:240],
-        "narrative_date": _as_text(data.get("narrative_date"), 80),
+        "summary": options.clean_narrative(data.get("summary"), 500) or content[:240],
+        "narrative_date": options.clean_narrative(data.get("narrative_date"), 80),
         "events": events,
         "memories": memories,
         "state_updates": data.get("state_updates") if isinstance(data.get("state_updates"), dict) else {},
@@ -705,7 +682,7 @@ def build_context(reality_id: int, timeline_id: int) -> dict:
             "ORDER BY kind='established' DESC, id DESC LIMIT 20", (reality_id, *lineage)
         )]
         chapters = [dict(row) for row in conn.execute(
-            "SELECT number,title,summary,narrative_date FROM whatif_chapters WHERE timeline_id=? ORDER BY number DESC LIMIT ?",
+            "SELECT number,title,summary,narrative_date,content FROM whatif_chapters WHERE timeline_id=? ORDER BY number DESC LIMIT ?",
             (timeline_id, provider.setting_int("context_chapters", 6, 1, 20)),
         )]
         characters = [dict(row) for row in conn.execute(
@@ -738,10 +715,18 @@ def build_context(reality_id: int, timeline_id: int) -> dict:
         "narrative_config": config,
         "modes": config["modes"],
         "premise": reality["premise"],
-        "first_scene": "",
+        "first_scene": next(
+            (_as_text(row.get("content"), 600) for row in memories if str(row.get("kind")) == "current"), ""
+        ),
         "rules": [f"[{row['kind']}] {row['text']}" for row in rules],
         "rule_rows": rules,
         "previous_summary": chapters[0]["summary"] if chapters else "",
+        "previous_paragraphs": [
+            paragraph.strip()
+            for chapter in chapters
+            for paragraph in re.split(r"\n\s*\n", str(chapter.get("content") or ""))
+            if paragraph.strip()
+        ][:200],
         "last_event": events[0]["description"] if events else "",
         "chapter_number": (chapters[0]["number"] + 1) if chapters else 1,
         "characters": characters,
@@ -924,8 +909,10 @@ def create_reality(owner: dict, proposal_input: dict, idempotency_key: str = "")
         )
     chapter_error = ""
     try:
-        generate_chapter(owner, reality_id, timeline_id, direction=_as_text(proposal.get("first_scene"), 400),
-                         idempotency_key=idempotency_key or f"first:{code}")
+        generate_turn(owner, reality_id, timeline_id,
+                      action=_as_text(proposal.get("first_scene"), 400),
+                      idempotency_key=idempotency_key or f"first:{code}",
+                      length_override=_as_text(config.get("chapter_length"), 40))
     except HTTPError as exc:
         chapter_error = exc.message
     state = get_state(owner, reality_id)
@@ -1104,6 +1091,11 @@ def apply_changes(conn, reality_id: int, timeline_id: int, changes: list) -> lis
 
 def _block_payload(context: dict, number: int, index: int, target_words: int,
                    direction: str, seed: str) -> dict:
+    used_paragraphs = [
+        str(item).strip()
+        for item in _as_list(context.get("previous_paragraphs"))
+        if str(item).strip()
+    ]
     return {
         "operation": "chapter_block",
         "number": number,
@@ -1113,6 +1105,7 @@ def _block_payload(context: dict, number: int, index: int, target_words: int,
         "narrative_config": context.get("narrative_config", {}),
         "direction": direction,
         "seed": seed,
+        "used_paragraphs": used_paragraphs[:200],
     }
 
 
@@ -1124,7 +1117,7 @@ def _generate_blocks(context: dict, plan: dict, direction: str, seed: str,
     number = int(context.get("chapter_number") or 1)
     for index in range(len(blocks) + 1, plan["blocks"] + 1):
         payload = _block_payload(context, number, index, plan["block_words"][index - 1], direction, seed)
-        payload["used_paragraphs"] = [
+        payload["used_paragraphs"] = list(payload.get("used_paragraphs") or []) + [
             paragraph.strip()
             for item in blocks
             for paragraph in re.split(r"\n\s*\n", str(item.get("text") or ""))
@@ -1168,11 +1161,21 @@ def _chapter_from_blocks(blocks: list, number: int, config: dict) -> dict:
         rules.extend(_as_list(data.get("proposed_rules"))[:2])
     composed = narrative.compose_chapter([str(item.get("text") or "") for item in blocks])
     move = MOVES[(number - 1) % len(MOVES)]
+    block_dates = [
+        str(item.get("data", {}).get("narrative_date") or "")
+        for item in blocks if isinstance(item.get("data"), dict)
+    ]
+    date = next((item for item in block_dates if item.strip()), "")
+    block_titles = [
+        str(item.get("data", {}).get("title") or "")
+        for item in blocks if isinstance(item.get("data"), dict)
+    ]
+    title = next((item for item in block_titles if item.strip()), move["title"])
     chapter = _validate_chapter({
-        "title": f"{number:02d}. {move['title']}",
+        "title": title,
         "content": composed,
         "summary": " ".join(str(item.get("summary") or "") for item in blocks),
-        "narrative_date": f"Ciclo {number}",
+        "narrative_date": date or ("El instante de llegada" if number == 1 else "Poco después"),
         "events": events,
         "memories": memories,
         "state_updates": blocks[-1].get("data", {}).get("state_updates", {}) if blocks else {},
@@ -1183,7 +1186,7 @@ def _chapter_from_blocks(blocks: list, number: int, config: dict) -> dict:
 
 
 def generate_chapter(owner: dict, reality_id: int, timeline_id: int, *, direction: str = "",
-                     idempotency_key: str = "") -> dict:
+                      idempotency_key: str = "", length_override: str = "") -> dict:
     reality = require_reality(owner, reality_id)
     timeline = one("SELECT * FROM whatif_timelines WHERE id=? AND reality_id=?", (timeline_id, reality_id))
     if not timeline:
@@ -1201,6 +1204,10 @@ def generate_chapter(owner: dict, reality_id: int, timeline_id: int, *, directio
         _job_stage(job_id, "Construyendo contexto")
         context = build_context(reality_id, timeline_id)
         config = context["narrative_config"]
+        if length_override:
+            config = dict(config)
+            config["chapter_length"] = length_override
+            context["narrative_config"] = config
         plan = narrative.chapter_plan(config)
         checkpoint = _job_result(job_id)
         blocks, generations = _generate_blocks(context, plan, direction, identity, job_id, checkpoint)
@@ -1278,6 +1285,170 @@ def generate_chapter(owner: dict, reality_id: int, timeline_id: int, *, directio
     except Exception:
         _job_fail(job_id, "No fue posible generar el capítulo. El estado anterior permanece intacto.")
         _record_usage(owner, provider.text_provider_name(), "chapter", None, False)
+        raise
+
+
+def _simulation_actions(context: dict, chapter: dict, action: str) -> list[str]:
+    actions: list[str] = []
+    characters = [row for row in _as_list(context.get("characters")) if isinstance(row, dict) and _as_text(row.get("name"))]
+    locations = [row for row in _as_list(context.get("locations")) if isinstance(row, dict) and _as_text(row.get("name"))]
+    events = [row for row in _as_list(context.get("events")) if isinstance(row, dict) and _as_text(row.get("title"))]
+    modes = [str(item).lower() for item in _as_list(context.get("modes"))]
+    lower_action = action.lower()
+    if characters:
+        first = _as_text(characters[0].get("name"), 120)
+        if any(word in lower_action for word in ("habl", "pregunt", "decir", "interrog")):
+            actions.append(f"Preguntar a {first} qué oculta sobre lo que acaba de pasar")
+        else:
+            actions.append(f"Acercarte a {first} y escuchar su versión")
+        actions.append(f"Seguir a {first} sin revelar lo que sabes")
+        if len(characters) > 1:
+            second = _as_text(characters[1].get("name"), 120)
+            actions.append(f"Contrastar lo que dicen {first} y {second}")
+    if locations:
+        place = _as_text(locations[0].get("name"), 120)
+        actions.append(f"Explorar {place} y registrar lo que encuentres")
+        actions.append(f"Buscar una salida o un objeto clave en {place}")
+    if events:
+        actions.append(f"Investigar {_as_text(events[0].get('title'), 120)}")
+    if any("apocalip" in mode for mode in modes):
+        actions.append("Buscar refugio y comprobar cuánto tiempo queda")
+    if any("crazy" in mode or "loco" in mode or "surreal" in mode for mode in modes):
+        actions.append("Seguir la anomalía aunque la lógica se rompa")
+    if any("ilimit" in mode or "unlimit" in mode for mode in modes):
+        actions.append("Probar una acción que antes era imposible")
+    chapter_title = _as_text(chapter.get("title"), 120)
+    if chapter_title:
+        actions.append(f"Actuar sobre {chapter_title}")
+    actions.extend((
+        "Observar el entorno antes de moverte",
+        "Consultar lo que ya sabes y decidir con cautela",
+        "Cambiar el rumbo de la escena con una acción libre",
+    ))
+    result: list[str] = []
+    for item in actions:
+        text = _as_text(item, 140)
+        if text and text not in result:
+            result.append(text)
+        if len(result) >= 5:
+            break
+    return result[:5]
+
+
+def _simulation_payload(context: dict, chapter: dict, action: str, timeline_id: int) -> dict:
+    scene = chapter.get("chapter") if isinstance(chapter.get("chapter"), dict) else {}
+    characters = [row for row in _as_list(context.get("characters")) if isinstance(row, dict) and _as_text(row.get("name"))]
+    locations = [row for row in _as_list(context.get("locations")) if isinstance(row, dict) and _as_text(row.get("name"))]
+    events = [row for row in _as_list(context.get("events")) if isinstance(row, dict) and _as_text(row.get("title"))]
+    memories = [row for row in _as_list(context.get("memories")) if isinstance(row, dict)]
+    current = next((row for row in memories if str(row.get("kind")) == "current"), None)
+    situation = _as_text(scene.get("summary"), 500)
+    if not situation and current:
+        situation = _as_text(current.get("content"), 500)
+    content = _as_text(scene.get("content"), 2000)
+    if not situation:
+        situation = content[:240]
+    names = [_as_text(row.get("name"), 120) for row in characters[:4]]
+    places = [_as_text(row.get("name"), 120) for row in locations[:4]]
+    titles = [_as_text(row.get("title"), 120) for row in events[:3]]
+    chapter_number = _int_safely(scene.get("number"), _int_safely(context.get("chapter_number"), 1))
+    premise = _as_text(context.get("premise"), 600)
+    year = re.search(r"\b(año\s+\d+\s*d\.\s*C\.?[^.]{0,40})", premise, flags=re.IGNORECASE)
+    date = _as_text(scene.get("narrative_date"), 80)
+    if not date:
+        date = options.clean_text(year.group(1), 80).strip(" ,") if year else (
+            "El instante de llegada" if chapter_number == 1 else "Poco después"
+        )
+    if not situation:
+        situation = _as_text(context.get("first_scene"), 500) or content[:240] or "El primer gesto todavía está por ocurrir."
+    return {
+        "scene_number": chapter_number,
+        "chapter_id": _int_safely(scene.get("id"), 0),
+        "timeline_id": timeline_id,
+        "location": places[0] if places else "el lugar donde comienza la escena",
+        "narrative_date": date,
+        "situation": situation,
+        "characters_present": names,
+        "interactive_elements": (places + titles)[:4],
+        "suggested_actions": _simulation_actions(context, scene, action),
+        "last_action": _as_text(action, 500) or "La escena se abre por primera vez",
+        "world_state": {
+            "characters": names,
+            "locations": places,
+            "events": titles,
+            "modes": [_as_text(item, 40) for item in _as_list(context.get("modes"))],
+        },
+        "content": content,
+    }
+
+
+def generate_turn(owner: dict, reality_id: int, timeline_id: int = 0, action: str = "", *,
+                  branch: bool = False, idempotency_key: str = "",
+                  length_override: str = "") -> dict:
+    reality = require_reality(owner, reality_id)
+    tid = _int_safely(timeline_id) or _int_safely(reality.get("current_timeline_id"))
+    if not tid:
+        raise HTTPError(404, "La línea temporal no existe.")
+    text = options.clean_text(action, 1200)
+    if text and len(text) < 3:
+        raise HTTPError(400, "Escribe una acción un poco más larga.")
+    if text and provider.setting("moderation", "1") == "1":
+        problem = options.moderation_error(text)
+        if problem:
+            raise HTTPError(400, problem)
+    key = idempotency_key or secrets.token_hex(12)
+    job_id, fresh = _job_start(
+        reality_id, tid, "turn", "turn:" + key, owner=owner,
+        request_data={"action": text, "branch": bool(branch), "timeline_id": tid},
+    )
+    if not fresh:
+        cached = _job_result(job_id)
+        turn = cached.get("turn") if isinstance(cached.get("turn"), dict) else {}
+        state = get_state(owner, reality_id, _int_safely(cached.get("chapter_id"), 0))
+        if turn:
+            state["simulation"] = turn
+            state["turn"] = turn
+        return state
+    try:
+        _job_stage(job_id, "Preparando escena")
+        check_rate(owner)
+        if branch and text:
+            branched = create_branch(
+                owner, reality_id, name=_as_text(text, 100) or "Línea alternativa",
+                divergence=text, from_timeline_id=tid,
+            )
+            tid = _int_safely(branched.get("timeline_id"), tid)
+            _job_stage(job_id, "Línea alternativa creada")
+        context = build_context(reality_id, tid)
+        chapter_result = generate_chapter(owner, reality_id, tid, direction=text,
+                                          idempotency_key="chapter:" + key,
+                                          length_override=length_override)
+        turn = _simulation_payload(context, chapter_result, text, tid)
+        with transaction() as conn:
+            _insert_memory_card(
+                conn, reality_id, tid, "simulation", f"Escena {turn['scene_number']}",
+                _as_text(turn.get("content") or turn.get("situation"), 2000), 10,
+                {"source": "simulation", "turn": turn},
+            )
+        output = {
+            "turn": turn,
+            "chapter": chapter_result.get("chapter", {}),
+            "chapter_id": _int_safely((chapter_result.get("chapter") or {}).get("id"), 0),
+            "timeline_id": tid,
+        }
+        _job_finish(job_id, output)
+        state = get_state(owner, reality_id, _int_safely(output["chapter_id"], 0))
+        state["simulation"] = turn
+        state["turn"] = turn
+        return state
+    except HTTPError as exc:
+        _job_fail(job_id, exc.message)
+        raise
+    except provider.ProviderError as exc:
+        _job_fail(job_id, exc.message)
+        raise HTTPError(exc.status, exc.message)
+    except Exception:
+        _job_fail(job_id, "No fue posible avanzar la escena. El estado anterior permanece intacto.")
         raise
 
 
@@ -1651,6 +1822,17 @@ def get_state(owner: dict, reality_id: int, chapter_id: int = 0) -> dict:
     grouped_cards: dict[str, list] = {}
     for card in cards:
         grouped_cards.setdefault(card["kind"], []).append(card)
+    simulation = None
+    for card in cards:
+        metadata = card.get("metadata")
+        if not isinstance(metadata, dict) or metadata.get("source") != "simulation":
+            continue
+        turn = metadata.get("turn")
+        if isinstance(turn, dict):
+            simulation = dict(turn)
+            simulation.setdefault("content", card["content"])
+            simulation["created_at"] = card["created_at"]
+            break
     blueprint_cards = [_card_dict(row) for row in query(
         f"SELECT id,kind,subject,content,importance,metadata,created_at FROM whatif_memory_cards "
         f"WHERE reality_id=? AND (timeline_id IS NULL OR timeline_id IN ({marks})) "
@@ -1701,6 +1883,8 @@ def get_state(owner: dict, reality_id: int, chapter_id: int = 0) -> dict:
         "narrative_config": config,
         "modes": config["modes"],
         "memory_cards": grouped_cards,
+        "simulation": simulation,
+        "suggested_actions": simulation.get("suggested_actions", []) if simulation else [],
         "blueprint": blueprint,
         "sections": sections,
         "character_relationships": relationships,

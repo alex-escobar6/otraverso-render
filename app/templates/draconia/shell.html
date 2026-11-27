@@ -1,0 +1,71 @@
+<main class="draconia-shell">
+<div id="draconia-stage" role="img" aria-label="Santuario 3D donde vive $DRAGON_NAME"></div>
+<header class="draconia-top">
+<div class="draconia-brand">
+<span class="draconia-kicker">DRACONIA</span>
+<h1>$TITLE</h1>
+<p>$SUBTITLE · Para $OWNER</p>
+</div>
+<div class="draconia-top-actions">
+<details class="draconia-name-pop">
+<summary><span id="draconia-name-summary">$DRAGON_NAME</span><small>cambiar nombre</small></summary>
+<form id="draconia-name-form" class="draconia-name-form">
+<input type="hidden" name="csrf" value="$CSRF">
+<label for="draconia-name">Nombre del dragón</label>
+<div>
+<input id="draconia-name" name="name" maxlength="40" value="$DRAGON_NAME" required>
+<button type="submit">Guardar</button>
+</div>
+</form>
+</details>
+<form method="post" action="/draconia/salir" class="draconia-exit">
+<input type="hidden" name="csrf" value="$CSRF">
+<button type="submit" class="draconia-exit-btn" title="Salir" aria-label="Salir">Salir</button>
+</form>
+</div>
+</header>
+<div id="draconia-loading" class="draconia-loading" role="status" aria-live="polite">
+<span class="draconia-loading__orb" aria-hidden="true"></span>
+<strong>Preparando el santuario…</strong>
+</div>
+<div id="draconia-status" class="draconia-status" role="status" aria-live="polite">$DRAGON_NAME te está mirando.</div>
+<p class="draconia-hint">Arrastra para girar · rueda o pellizca para acercar · doble clic para centrar</p>
+<nav class="draconia-dock" aria-label="Controles del santuario">
+<button type="button" data-action="pet" title="Acariciar al dragón">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V6a1.6 1.6 0 0 1 3.2 0v5M11.2 11V4.8a1.6 1.6 0 0 1 3.2 0V11M14.4 11V6.4a1.6 1.6 0 0 1 3.2 0V14c0 3.6-2.3 6-6 6h-1c-2.7 0-4.4-1.6-5.4-4l-1.4-3.4a1.6 1.6 0 0 1 2.8-1.5L8 14"/></svg>
+<span class="draconia-control-label">Acariciar</span>
+</button>
+<button type="button" data-action="call" title="Llamar al dragón">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4"/></svg>
+<span class="draconia-control-label">Llamar</span>
+</button>
+<button type="button" data-action="play" title="Jugar con la esfera mágica">
+<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+<span class="draconia-control-label">Jugar</span>
+</button>
+<button type="button" data-action="sit" title="Descansar sentado">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h14M7 19v-5a5 5 0 0 1 10 0v5M9 8c0-2 3-2.5 3-4.5M15 8c0-2-3-2.5-3-4.5"/></svg>
+<span class="draconia-control-label">Descansar</span>
+</button>
+<button type="button" data-action="sleep" title="Dormir">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 15.5A7.2 7.2 0 0 1 8.5 5a7.2 7.2 0 1 0 10.5 10.5z"/><path d="M17 4v3M15.5 5.5h3"/></svg>
+<span class="draconia-control-label">Dormir</span>
+</button>
+<button type="button" data-action="fly" title="Volar">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c0-4 1-7 3-9 2-2 5-2 7-1-1 3-3 5-6 6l-4 4zM12 20c0-4-1-7-3-9-2-2-5-2-7-1 1 3 3 5 6 6l4 4z"/><path d="M12 12V4"/></svg>
+<span class="draconia-control-label">Volar</span>
+</button>
+<button type="button" data-action="camera" title="Centrar cámara">
+<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+<span class="draconia-control-label">Centrar</span>
+</button>
+<button type="button" data-action="motion" aria-pressed="false" title="Suavizar movimiento">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c2-4 4 4 6 0s4 4 6 0 4 4 6 0"/></svg>
+<span class="draconia-control-label">Movimiento</span>
+</button>
+<button type="button" data-action="sound" aria-pressed="true" title="Sonido">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9a4 4 0 0 1 0 6M19.5 6a8 8 0 0 1 0 12"/></svg>
+<span class="draconia-control-label">Sonido</span>
+</button>
+</nav>
+</main>

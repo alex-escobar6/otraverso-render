@@ -9,17 +9,17 @@ from xml.sax.saxutils import escape as xml_escape
 
 from app.config import Config
 from app.core.auth import public_csrf_token
-from app.core.http import HTTPError, Request, Response, redirect
+from app.core.http import HTTPError, Request, Response, json_response, redirect
 from app.core.render import esc, money, render, render_page
 from app.db import get_setting, query, settings_group
 from app.services.analytics import track_event
 from app.services.catalog import (
-    active_promotions, categories_with_counts, count_products,
+    PUBLIC_PRODUCT_SELECT, active_promotions, categories_with_counts, count_products,
     get_product_by_slug, list_products, product_images, product_variants,
     related_products,
 )
 from app.services.delivery import human_duration, municipalities, product_delivery, rates_for_zone, zones
-from app.services.whatsapp import contact_url, register_request
+from app.services.whatsapp import contact_url, enabled as whatsapp_enabled, log_click, register_request
 
 
 def register(router) -> None:
@@ -28,6 +28,7 @@ def register(router) -> None:
     router.get("/shop/categoria/{slug}", category, name="shop.category")
     router.get("/shop/producto/{slug}", product, name="shop.product")
     router.post("/shop/whatsapp", whatsapp_request, name="shop.whatsapp")
+    router.post("/shop/whatsapp/click", whatsapp_click, name="shop.whatsapp.click")
     router.get("/shop/cobertura", coverage, name="shop.coverage")
     router.get("/pages/{slug}", page, name="shop.page")
     router.get("/sitemap.xml", sitemap, name="shop.sitemap")
@@ -38,6 +39,26 @@ def register(router) -> None:
 def _page(title: str, content: str, request: Request, *, seo: dict[str, str] | None = None, **kwargs) -> Response:
     return Response(render_page(title, content, body_class="mode-shop", active="shop", request=request,
                                 seo_override=seo, **kwargs))
+
+
+def _wa_enabled() -> bool:
+    return whatsapp_enabled(settings_group("whatsapp"))
+
+
+def _wa_link() -> str:
+    return contact_url() if _wa_enabled() else ""
+
+
+def _wa_csrf(request: Request) -> str:
+    return "" if request.user else public_csrf_token()
+
+
+def _wa_button(request: Request, url: str, label: str, source: str) -> str:
+    if not url:
+        return ""
+    return (f'<a class="btn btn-primary" href="{esc(url)}" target="_blank" rel="noopener noreferrer" '
+            f'data-wa-log="{esc(source)}" data-wa-csrf="{esc(_wa_csrf(request))}" '
+            f'data-wa-url="{esc(url)}">{esc(label)}</a>')
 
 
 def product_card(row) -> str:
@@ -138,9 +159,22 @@ def home(request: Request) -> Response:
                       f'<div><span class="eyebrow">Ofertas</span><h2>Promociones activas</h2></div></div>'
                       f'<div class="benefits">{promo_html}</div></div></section>')
     if sections.get("coverage", 1):
+        rate_rows = query(
+            "SELECT m.name AS municipality, dz.name AS zone, zr.modality, zr.estimated_hours, zr.price_cents, zr.conditions "
+            "FROM zone_rates zr JOIN delivery_zones dz ON dz.id=zr.zone_id "
+            "JOIN municipalities m ON m.id=dz.municipality_id "
+            "WHERE zr.active=1 AND dz.active=1 AND m.active=1 "
+            "ORDER BY zr.estimated_hours,zr.id LIMIT 6"
+        )
+        summary = "".join(
+            f'<div class="coverage-row"><div><strong>{esc(r["municipality"])}</strong><br><small>{esc(r["zone"])}</small></div>'
+            f'<div>{"Inventario" if r["modality"]=="stock" else "Bajo pedido"}</div>'
+            f'<div><strong>{human_duration(r["estimated_hours"])}</strong><br>'
+            f'<small>{money(r["price_cents"])} · {esc(r["conditions"] or "Sin condiciones especiales")}</small></div></div>'
+            for r in rate_rows
+        ) or '<p class="hint">Aún no hay tarifas activas configuradas.</p>'
         pieces.append(render("shop/coverage_summary.html",
-            NOTE=esc(commercial.get("delivery_note", "")),
-            WHATSAPP=esc(contact_url())))
+            NOTE=esc(commercial.get("delivery_note", "")), SUMMARY=summary))
 
     content = render("shop/home.html",
         HERO_TITLE=esc(visual.get("shop_hero_title", "Bienvenido a la tienda")),
@@ -249,13 +283,14 @@ def product(request: Request, slug: str) -> Response:
     track_event(request, "product_view", product_id=item["id"])
 
     from app.db import one
-    refreshed = one("SELECT * FROM products WHERE id=?", (item["id"],))
+    refreshed = one(f"SELECT {PUBLIC_PRODUCT_SELECT} FROM products WHERE id=?", (item["id"],))
     images = product_images(item["id"])
     variants = product_variants(item["id"])
     related = related_products(item)
     zone_id, zone_name = _selected_zone(request)
     short_delivery, detail_delivery = product_delivery(refreshed, zone_id)
     currency = get_setting("commercial", "currency", "COP")
+    commercial = settings_group("commercial")
 
     if images:
         main_image = f'<img src="{esc(images[0]["url"])}" alt="{esc(item["name"])}" id="main-image">'
@@ -288,6 +323,9 @@ def product(request: Request, slug: str) -> Response:
     if item["modality"] == "stock" and item["stock"] <= 0:
         availability = '<div class="notice">Agotado temporalmente. Puedes ver otros productos disponibles.</div>'
         order_form = ""
+    elif not _wa_enabled():
+        availability = f'<div class="notice stock">{esc(detail_delivery)}</div>'
+        order_form = '<div class="notice">Las consultas por WhatsApp están deshabilitadas temporalmente.</div>'
     else:
         availability = f'<div class="notice stock">{esc(detail_delivery)}</div>'
         zone_select = "".join(
@@ -314,6 +352,7 @@ def product(request: Request, slug: str) -> Response:
         SPECS=specs or "<tr><td>Información</td><td>Consultar con el vendedor</td></tr>",
         VARIANTS=variant_html or '<span class="hint">Sin variantes registradas</span>',
         AVAILABILITY=availability, FORM=order_form,
+        TERMS_NOTE=esc(commercial.get("sale_disclaimer", "La apertura del chat no confirma una compra.")),
         RELATED=product_grid(related),
     )
     return _page(item["name"], content, request,
@@ -322,6 +361,8 @@ def product(request: Request, slug: str) -> Response:
 
 def whatsapp_request(request: Request) -> Response:
     from app.db import one
+    if not _wa_enabled():
+        raise HTTPError(403, "Las consultas por WhatsApp están deshabilitadas", "whatsapp_disabled")
     product = one("SELECT * FROM products WHERE id=? AND status='active'", (request.int_param("product_id"),))
     if not product:
         raise HTTPError(404, "Producto no disponible")
@@ -333,6 +374,24 @@ def whatsapp_request(request: Request) -> Response:
         message_note=request.param("note"), zone_id=zone_id, consent=request.param("consent"),
     )
     return redirect(url)
+
+
+def whatsapp_click(request: Request) -> Response:
+    if not _wa_enabled():
+        raise HTTPError(403, "Las consultas por WhatsApp están deshabilitadas", "whatsapp_disabled")
+    try:
+        product_id = int(request.param("product_id", "0") or 0) or None
+    except ValueError:
+        product_id = None
+    public_id = log_click(
+        request,
+        request.param("source", "link").strip() or "link",
+        product_id=product_id,
+        message=request.param("message", ""),
+        url=request.param("url", ""),
+        path=request.param("path", ""),
+    )
+    return json_response({"ok": True, "public_id": public_id})
 
 
 def coverage(request: Request) -> Response:
@@ -354,18 +413,20 @@ def coverage(request: Request) -> Response:
                 <small>{money(rate['price_cents'])} · {esc(rate['conditions'] or 'Sin condiciones especiales')}</small></div>
             </div>""")
     commercial = settings_group("commercial")
+    whatsapp_url = _wa_link()
     content = render("shop/coverage.html",
         OPTIONS=options,
         ROWS="".join(rate_rows) or '<p class="empty-state">No hay zonas activas configuradas.</p>',
         NOTE=esc(commercial.get("delivery_note", "")),
         IMPORT=esc(commercial.get("import_conditions", "")),
-        WHATSAPP=esc(contact_url()),
+        WHATSAPP_BUTTON=_wa_button(request, whatsapp_url, "Consultar cobertura por WhatsApp", "coverage"),
     )
     return _page("Cobertura y entregas — OTRAVERSO SHOP", content, request)
 
 
 PAGE_KEYS = {
     "condiciones": ("Condiciones de compra", "terms"),
+    "pagos": ("Métodos de pago", "payment_methods"),
     "privacidad": ("Tratamiento de datos personales", "privacy"),
     "devoluciones": ("Cambios y devoluciones", "returns"),
     "contacto": ("Contacto", "hours"),
@@ -384,7 +445,7 @@ def page(request: Request, slug: str) -> Response:
                 f"Horarios: {commercial.get('hours','')}<br>"
                 f"Ubicación: {commercial.get('address','')}")
     content = render("shop/page.html", TITLE=esc(title), BODY=esc(body).replace("\n", "<br>"),
-                     WHATSAPP=esc(contact_url()))
+                     WHATSAPP_BUTTON=_wa_button(request, _wa_link(), "Contactar por WhatsApp", "page"))
     return _page(title, content, request)
 
 

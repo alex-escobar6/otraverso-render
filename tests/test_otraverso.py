@@ -133,7 +133,19 @@ class OtraversoTests(unittest.TestCase):
                           "whatif_realities", "whatif_chapters", "whatif_timelines", "whatif_memories",
                           "whatif_memory_cards", "whatif_interventions", "whatif_versions", "whatif_assets", "site_pages"):
             self.assertIn(expected, tables)
-        self.assertEqual(one("PRAGMA user_version")[0], 6)
+        self.assertEqual(one("PRAGMA user_version")[0], 8)
+        page_columns = {row[1] for row in query("PRAGMA table_info(site_pages)")}
+        self.assertTrue({"parent_code", "element_type", "notice_title", "notice_description",
+                         "notice_button", "notice_image"} <= page_columns)
+        product_columns = {row[1] for row in query("PRAGMA table_info(products)")}
+        self.assertIn("target_margin_percent", product_columns)
+        self.assertIn("whatsapp_message", product_columns)
+        order_columns = {row[1] for row in query("PRAGMA table_info(orders)")}
+        self.assertTrue({"source", "payment_method", "payment_status", "paid_at", "created_by"} <= order_columns)
+        item_columns = {row[1] for row in query("PRAGMA table_info(order_items)")}
+        self.assertIn("cost_cents", item_columns)
+        click_columns = {row[1] for row in query("PRAGMA table_info(whatsapp_clicks)")}
+        self.assertTrue({"public_id", "message", "url", "path", "user_agent", "trace_id"} <= click_columns)
         enabled = {row["code"] for row in query("SELECT code FROM modules WHERE enabled=1")}
         self.assertEqual(enabled, {"portal", "shop", "play", "whatif"})
         self.assertNotIn("contraseña", str(query("SELECT password_hash FROM users")[0]["password_hash"]).lower())
@@ -1451,20 +1463,26 @@ class PageManagementTests(unittest.TestCase):
         return values
 
     def test_01_seed_and_admin_ui(self) -> None:
-        rows = query("SELECT code, route, status FROM site_pages")
-        self.assertEqual(
-            {(row["code"], row["route"], row["status"]) for row in rows},
-            {("portal", "/", "available"), ("shop", "/shop", "available"),
-             ("whatif", "/what-if", "available"), ("play", "/play", "available")},
-        )
-        self.assertEqual(one("PRAGMA user_version")[0], 6)
+        rows = {(row["code"], row["route"], row["status"]) for row in query(
+            "SELECT code, route, status FROM site_pages")}
+        self.assertTrue({("portal", "/", "available"), ("shop", "/shop", "available"),
+                         ("whatif", "/what-if", "available"), ("play", "/play", "available")} <= rows)
+        self.assertTrue({("play_home", "/play", "available"), ("play_hub", "/play/hub", "available"),
+                         ("play_catalog", "/play#catalogo", "available"),
+                         ("play_game_gravity", "/play/gravity", "available"),
+                         ("play_game_star_hunter", "/play/games/star-hunter", "available"),
+                         ("play_game_lost_worlds", "", "coming_soon"),
+                         ("play_game_neural", "", "coming_soon")} <= rows)
+        self.assertEqual(one("PRAGMA user_version")[0], 8)
         status, _, body = self.admin.call("/admin/pages")
         self.assertTrue(status.startswith("200"))
-        self.assertIn("Gestión de páginas", body)
+        self.assertIn("Disponibilidad de páginas", body)
         self.assertIn("/what-if", body)
+        self.assertIn("HUB de PLAY", body)
+        self.assertIn("LOST WORLDS", body)
         status, _, body = self.admin.call(f"/admin/pages/{self.row['id']}/edit")
         self.assertTrue(status.startswith("200"))
-        self.assertIn("Mensaje de próximamente", body)
+        self.assertIn("Mensaje heredado de próximamente", body)
         status, _, _ = Client().call(f"/admin/pages/{self.row['id']}/status", "POST",
                                      {"csrf": public_csrf_token(), "status": "hidden"})
         self.assertIn(status[:3], ("401", "403"))
@@ -1487,10 +1505,12 @@ class PageManagementTests(unittest.TestCase):
         self.assertTrue(status.startswith("200"))
         self.assertIn("Mensaje controlado de próximamente.", body)
         self.assertIn("PRONTO", body)
-        guest = json.loads(anonymous.call(self.API + "/guest")[2])["token"]
-        csrf = json.loads(anonymous.call(self.API + f"/config?guest={guest}")[2])["csrf"]
+        for path in ("/guest", "/config"):
+            status, _, body = anonymous.call(self.API + path)
+            self.assertTrue(status.startswith("403"), path)
+            self.assertIn("page_coming_soon", body)
         status, _, body = anonymous.call(self.API + "/proposals", "POST",
-                                         {"guest": guest, "csrf": csrf, "idea": "Prueba de bloqueo"})
+                                         {"guest": "x", "csrf": "x", "idea": "Prueba de bloqueo"})
         self.assertTrue(status.startswith("403"))
         self.assertIn("page_coming_soon", body)
 
@@ -2406,6 +2426,364 @@ class WhatIfFantasyMachineTests(unittest.TestCase):
         self.assertTrue(query("SELECT id FROM whatif_versions WHERE reality_id=?", (reality_id,)))
 
 
+class CommercialImprovementsTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.admin = Client()
+        assert cls.admin.login(), "No se pudo iniciar sesión en las pruebas comerciales"
+
+    def _product(self, *, cost: str = "123456", price: str = "400000", stock: str = "2",
+                 message: str = "") -> dict:
+        name = f"Producto Comercial {uuid.uuid4().hex[:8]}"
+        form = {
+            "csrf": self.admin.csrf, "name": name, "modality": "stock", "status": "active",
+            "price": price, "cost": cost, "stock": stock, "low_stock_threshold": "1",
+            "delivery_hours": "24", "target_margin_percent": "35", "whatsapp_message": message,
+        }
+        status, _, _ = self.admin.call("/admin/products/create", "POST", form)
+        self.assertTrue(status.startswith("303"), status)
+        product = one("SELECT * FROM products WHERE name=?", (name,))
+        self.assertIsNotNone(product)
+        return dict(product)
+
+    def test_01_margins_are_persisted_and_cost_is_private(self) -> None:
+        product = self._product(message="MENSAJE {name} sobre {product}")
+        self.assertEqual(product["target_margin_percent"], 35)
+        self.assertEqual(product["whatsapp_message"], "MENSAJE {name} sobre {product}")
+        status, _, body = Client().call("/shop/catalogo?q=Producto%20Comercial")
+        self.assertTrue(status.startswith("200"))
+        self.assertIn("Producto Comercial", body)
+        self.assertNotIn("Costo de adquisición", body)
+        self.assertNotIn("123456", body)
+
+    def test_02_product_message_and_click_logging(self) -> None:
+        product = self._product(message="Hola {name}, consulto {product} por {price}")
+        client = Client()
+        status, headers, _ = client.call("/shop/whatsapp", "POST", {
+            "csrf": public_csrf_token(), "product_id": product["id"], "name": "Ana Prueba",
+            "phone": "3005556677", "quantity": "1", "source": "product",
+            "note": "Color disponible", "consent": "1", "zona": "",
+        })
+        self.assertTrue(status.startswith("303"), status)
+        self.assertTrue(headers.get("Location", "").startswith("https://wa.me/"))
+        request = one("SELECT * FROM purchase_requests ORDER BY id DESC LIMIT 1")
+        self.assertIn("Hola Ana Prueba", request["message"])
+        self.assertIn(product["name"], request["message"])
+        click = one("SELECT * FROM whatsapp_clicks WHERE request_id=?", (request["id"],))
+        self.assertTrue(click["public_id"])
+        self.assertEqual(click["source"], "product_request")
+        self.assertEqual(click["message"], request["message"])
+
+        status, _, body = client.call("/shop/whatsapp/click", "POST", {
+            "csrf": public_csrf_token(), "source": "float",
+            "url": "https://wa.me/573001234567?text=Hola", "path": "/shop", "message": "Hola",
+        })
+        self.assertTrue(status.startswith("200"), status)
+        payload = json.loads(body)
+        standalone = one("SELECT * FROM whatsapp_clicks WHERE public_id=?", (payload["public_id"],))
+        self.assertIsNotNone(standalone)
+        self.assertIsNone(standalone["request_id"])
+        self.assertEqual(standalone["source"], "float")
+
+    def test_03_manual_payment_is_explicit(self) -> None:
+        product = self._product(cost="90000", price="300000")
+        phone = f"300{uuid.uuid4().int % 100000000:08d}"
+        status, _, _ = self.admin.call("/admin/orders/create", "POST", {
+            "csrf": self.admin.csrf, "name": "Cliente Pago", "phone": phone,
+            "product_id": product["id"], "quantity": "1", "shipping": "0",
+            "payment_method": "Transferencia", "payment_status": "paid",
+        })
+        self.assertTrue(status.startswith("303"), status)
+        order = one("SELECT * FROM orders ORDER BY id DESC LIMIT 1")
+        self.assertEqual(order["source"], "manual")
+        self.assertEqual(order["payment_status"], "paid")
+        self.assertEqual(order["payment_method"], "Transferencia")
+        self.assertIsNotNone(order["paid_at"])
+        item = one("SELECT * FROM order_items WHERE order_id=?", (order["id"],))
+        self.assertEqual(item["cost_cents"], 9000000)
+        history = query("SELECT * FROM order_history WHERE order_id=?", (order["id"],))
+        self.assertTrue(any("pago registrado manualmente" in (row["note"] or "").lower() for row in history))
+
+        status, _, _ = self.admin.call("/admin/orders/create", "POST", {
+            "csrf": self.admin.csrf, "name": "Cliente Pago", "phone": phone,
+            "product_id": product["id"], "quantity": "1", "shipping": "0",
+        })
+        self.assertTrue(status.startswith("303"), status)
+        unpaid = one("SELECT * FROM orders ORDER BY id DESC LIMIT 1")
+        self.assertEqual(unpaid["payment_status"], "unpaid")
+        self.assertIsNone(unpaid["paid_at"])
+
+    def test_04_conversion_keeps_zone_and_rate(self) -> None:
+        product = self._product(cost="50000", price="100000", stock="5")
+        zone = one("SELECT id FROM delivery_zones WHERE active=1 ORDER BY id LIMIT 1")
+        self.assertIsNotNone(zone)
+        shipping_cents = 25000
+        rate = one("SELECT id FROM zone_rates WHERE zone_id=? AND modality='stock' ORDER BY id LIMIT 1",
+                   (zone["id"],))
+        if rate:
+            execute("UPDATE zone_rates SET active=1,price_cents=? WHERE id=?", (shipping_cents, rate["id"]))
+        else:
+            execute(
+                "INSERT INTO zone_rates(zone_id,modality,label,price_cents,estimated_hours,conditions,active) "
+                "VALUES (?,?,?,?,?,?,1)", (zone["id"], "stock", "Zona QA", shipping_cents, 24, "Prueba"),
+            )
+        phone = f"300{uuid.uuid4().int % 100000000:08d}"
+        customer_id = execute(
+            "INSERT INTO customers(name,phone,whatsapp,data_consent) VALUES (?,?,?,1)",
+            ("Solicitante QA", phone, phone),
+        ).lastrowid
+        code = "QA-" + uuid.uuid4().hex[:10].upper()
+        request_id = execute(
+            "INSERT INTO purchase_requests(code,product_id,customer_id,name,phone,quantity,source,zone_id) "
+            "VALUES (?,?,?,?,?,1,'product',?)",
+            (code, product["id"], customer_id, "Solicitante QA", phone, zone["id"]),
+        ).lastrowid
+        status, _, _ = self.admin.call(f"/admin/requests/{request_id}/convert", "POST",
+                                       {"csrf": self.admin.csrf})
+        self.assertTrue(status.startswith("303"), status)
+        order = one("SELECT * FROM orders ORDER BY id DESC LIMIT 1")
+        self.assertEqual(order["source"], "request")
+        self.assertEqual(order["zone_id"], zone["id"])
+        self.assertEqual(order["shipping_cents"], shipping_cents)
+        self.assertEqual(order["total_cents"], product["price_cents"] + shipping_cents)
+
+    def test_05_inactive_rate_survives_update(self) -> None:
+        rate = one("SELECT id,active FROM zone_rates ORDER BY id LIMIT 1")
+        self.assertIsNotNone(rate)
+        original = rate["active"]
+        try:
+            status, _, _ = self.admin.call(f"/admin/coverage/rates/{rate['id']}/update", "POST", {
+                "csrf": self.admin.csrf, "price": "123", "hours": "12", "label": "Inactiva QA", "active": "0",
+            })
+            self.assertTrue(status.startswith("303"), status)
+            self.assertEqual(one("SELECT active FROM zone_rates WHERE id=?", (rate["id"],))["active"], 0)
+        finally:
+            execute("UPDATE zone_rates SET active=? WHERE id=?", (original, rate["id"]))
+
+    def test_06_page_states_block_stateful_requests_before_csrf(self) -> None:
+        row = one("SELECT status FROM site_pages WHERE code='shop'")
+        original = row["status"]
+        try:
+            execute("UPDATE site_pages SET status='hidden' WHERE code='shop'")
+            status, _, _ = Client().call("/shop/whatsapp/click", "POST", {})
+            self.assertTrue(status.startswith("404"), status)
+            status, _, _ = self.admin.call("/shop/whatsapp/click", "POST", {
+                "csrf": self.admin.csrf, "source": "float",
+                "url": "https://wa.me/573001234567?text=Hola",
+            })
+            self.assertTrue(status.startswith("200"), status)
+
+            execute("UPDATE site_pages SET status='coming_soon' WHERE code='shop'")
+            status, _, body = Client().call("/shop", "GET")
+            self.assertTrue(status.startswith("200"))
+            self.assertIn("próximamente", body.lower())
+            status, _, _ = Client().call("/shop/whatsapp/click", "POST", {})
+            self.assertTrue(status.startswith("403"), status)
+        finally:
+            execute("UPDATE site_pages SET status=? WHERE code='shop'", (original,))
+
+
+class GranularPlayAvailabilityTests(unittest.TestCase):
+    CODES = ("play", "play_home", "play_hub", "play_profile", "play_catalog", "play_api",
+             "play_game_nexus_rush", "play_game_gravity", "play_game_star_hunter")
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        init_db()
+        cls.admin = Client()
+        assert cls.admin.login()
+        cls.original = {}
+        for code in cls.CODES:
+            row = one("SELECT status FROM site_pages WHERE code=?", (code,))
+            assert row, code
+            cls.original[code] = row["status"]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        for code, status in cls.original.items():
+            execute("UPDATE site_pages SET status=? WHERE code=?", (status, code))
+
+    def setUp(self) -> None:
+        for code, status in self.original.items():
+            execute("UPDATE site_pages SET status=? WHERE code=?", (status, code))
+
+    def set_status(self, code: str, status: str) -> None:
+        row = one("SELECT id FROM site_pages WHERE code=?", (code,))
+        state, _, _ = self.admin.call(f"/admin/pages/{row['id']}/status", "POST", {
+            "csrf": self.admin.csrf, "status": status,
+        })
+        self.assertTrue(state.startswith("303"), state)
+
+    def test_01_hidden_play_blocks_pages_api_and_assets(self) -> None:
+        self.set_status("play", "hidden")
+        for path in ("/play", "/play/hub", "/play/gravity", "/api/play/v1/games",
+                     "/static/play/games/gravity/1.0.0/gravity.js"):
+            state, _, _ = Client().call(path)
+            self.assertTrue(state.startswith("404"), path)
+        for path in ("/play", "/play/gravity", "/admin/pages"):
+            state, _, _ = self.admin.call(path)
+            self.assertTrue(state.startswith("200"), path)
+
+    def test_02_page_only_play_shows_notice_without_access(self) -> None:
+        self.set_status("play", "page_only")
+        state, _, body = Client().call("/play")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn("SOLO PÁGINA VISIBLE", body)
+        self.assertNotIn('data-play-game="gravity"', body)
+        state, _, _ = Client().call("/play/gravity")
+        self.assertTrue(state.startswith("403"))
+        state, _, body = Client().call("/api/play/v1/games")
+        self.assertTrue(state.startswith("403"))
+        self.assertIn("page_only", body)
+        state, _, _ = Client().call("/static/play/games/gravity/1.0.0/gravity.js")
+        self.assertTrue(state.startswith("404"))
+        state, _, _ = self.admin.call("/play/gravity")
+        self.assertTrue(state.startswith("200"))
+
+    def test_03_children_are_filtered_independently(self) -> None:
+        self.set_status("play_hub", "hidden")
+        self.set_status("play_catalog", "coming_soon")
+        self.set_status("play_game_gravity", "coming_soon")
+        self.set_status("play_game_star_hunter", "hidden")
+        state, _, body = Client().call("/play")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn("PRÓXIMAMENTE", body)
+        self.assertNotIn("data-play-game=", body)
+        self.assertNotIn('data-hub-mode="hub"', body)
+        state, _, _ = Client().call("/play/hub")
+        self.assertTrue(state.startswith("404"))
+        state, _, _ = Client().call("/play/games/star-hunter")
+        self.assertTrue(state.startswith("404"))
+        state, _, body = Client().call("/api/play/v1/games")
+        self.assertTrue(state.startswith("200"))
+        games = {row["code"]: row for row in json.loads(body)["games"]}
+        self.assertNotIn("star-hunter", games)
+        self.assertEqual(games["gravity"]["availability"], "coming_soon")
+        state, _, _ = Client().call("/api/play/v1/games/gravity/manifest")
+        self.assertTrue(state.startswith("403"))
+        state, _, _ = Client().call("/api/play/v1/games/nexus-rush/manifest")
+        self.assertTrue(state.startswith("200"))
+
+    def test_04_available_game_exposes_page_manifest_and_assets(self) -> None:
+        self.set_status("play_game_gravity", "available")
+        state, _, body = Client().call("/play")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn('data-hub-mode="hub"', body)
+        self.assertIn('data-play-game="gravity"', body)
+        state, _, body = Client().call("/play/gravity")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn("data-game-result", body)
+        state, _, _ = Client().call("/api/play/v1/games/gravity/manifest")
+        self.assertTrue(state.startswith("200"))
+        state, _, _ = Client().call("/static/play/games/gravity/1.0.0/gravity.js")
+        self.assertTrue(state.startswith("200"))
+
+    def test_05_admin_status_change_is_immediate(self) -> None:
+        self.set_status("play_game_gravity", "hidden")
+        state, _, _ = Client().call("/play/gravity")
+        self.assertTrue(state.startswith("404"))
+        self.set_status("play_game_gravity", "available")
+        state, _, _ = Client().call("/play/gravity")
+        self.assertTrue(state.startswith("200"))
+
+
+class ProductEditRegressionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        init_db()
+        cls.admin = Client()
+        assert cls.admin.login()
+
+    def create_legacy_product(self) -> int:
+        name = "Producto heredado QA " + uuid.uuid4().hex[:6]
+        form = {
+            "csrf": self.admin.csrf, "name": name, "modality": "order",
+            "status": "draft", "price": "99000", "cost": "", "sku": "", "short_description": "",
+            "description": "", "supplier_url": "", "tags": "", "attributes": "",
+            "whatsapp_message": "", "seo_title": "", "seo_description": "",
+        }
+        state, _, _ = self.admin.call("/admin/products/create", "POST", form)
+        self.assertTrue(state.startswith("303"), state)
+        product = one("SELECT id FROM products WHERE name=?", (name,))
+        assert product
+        execute(
+            "UPDATE products SET compare_price_cents=0, cost_cents=0, target_margin_percent=0, "
+            "whatsapp_message='', attributes='{}', seo_title='', seo_description='', tags='', "
+            "supplier_url='', sku='', short_description='', description='', category_id=NULL, "
+            "supplier_id=NULL WHERE id=?", (product["id"],)
+        )
+        return product["id"]
+
+    def test_01_edit_legacy_product_without_500(self) -> None:
+        pid = self.create_legacy_product()
+        state, _, body = self.admin.call(f"/admin/products/{pid}/edit")
+        self.assertTrue(state.startswith("200"), state[:200])
+        self.assertNotIn("500 -", body)
+        self.assertIn("Producto heredado QA", body)
+
+        state, _, _ = self.admin.call(f"/admin/products/{pid}/update", "POST", {
+            "csrf": self.admin.csrf, "name": "Producto heredado editado", "modality": "order",
+            "status": "draft", "price": "129000", "cost": "70000", "target_margin_percent": "35",
+            "attributes": "Color: Azul", "whatsapp_message": "Hola, quiero este producto",
+            "seo_title": "Producto editado QA", "seo_description": "Descripción SEO editada",
+            "tags": "qa, heredado",
+        })
+        self.assertTrue(state.startswith("303"), state)
+        saved = one("SELECT * FROM products WHERE id=?", (pid,))
+        self.assertEqual(saved["name"], "Producto heredado editado")
+        self.assertEqual(saved["price_cents"], 12900000)
+        self.assertEqual(saved["cost_cents"], 7000000)
+        self.assertEqual(saved["target_margin_percent"], 35)
+        self.assertEqual(saved["whatsapp_message"], "Hola, quiero este producto")
+        self.assertEqual(saved["seo_title"], "Producto editado QA")
+
+        state, _, body = self.admin.call(f"/admin/products/{pid}/edit")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn("Producto heredado editado", body)
+        self.assertIn("Producto editado QA", body)
+        self.assertIn("Color: Azul", body)
+
+    def test_02_variants_can_be_edited(self) -> None:
+        pid = self.create_legacy_product()
+        state, _, _ = self.admin.call(f"/admin/products/{pid}/variants", "POST", {
+            "csrf": self.admin.csrf, "name": "Talla S", "sku": "QA-S", "price_delta": "-1000", "stock": "3",
+        })
+        self.assertTrue(state.startswith("303"), state)
+        variant = one("SELECT * FROM product_variants WHERE product_id=?", (pid,))
+        assert variant
+        state, _, body = self.admin.call(f"/admin/products/{pid}/edit")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn("Talla S", body)
+        self.assertIn("QA-S", body)
+        self.assertIn("Guardar", body)
+
+        state, _, _ = self.admin.call(
+            f"/admin/products/{pid}/variants/{variant['id']}/update", "POST", {
+                "csrf": self.admin.csrf, "name": "Talla M", "sku": "QA-M",
+                "price_delta": "1500", "stock": "7", "active": "1",
+            })
+        self.assertTrue(state.startswith("303"), state)
+        saved = one("SELECT * FROM product_variants WHERE id=?", (variant["id"],))
+        self.assertEqual(saved["name"], "Talla M")
+        self.assertEqual(saved["sku"], "QA-M")
+        self.assertEqual(saved["price_delta_cents"], 150000)
+        self.assertEqual(saved["stock"], 7)
+        self.assertEqual(saved["active"], 1)
+
+
+class ShopHeroTests(unittest.TestCase):
+    def test_hero_is_light_and_actionable(self) -> None:
+        state, _, body = Client().call("/shop")
+        self.assertTrue(state.startswith("200"))
+        self.assertIn("shop-hero", body)
+        self.assertIn('action="/shop/catalogo"', body)
+        self.assertIn('href="/shop/cobertura"', body)
+        self.assertNotIn('style="margin-top:.5rem;color:#fff"', body)
+        css = (Path(__file__).resolve().parents[1] / "app/static/css/style.css").read_text(encoding="utf-8")
+        self.assertIn("linear-gradient(135deg,#fffdf8 0%,#f7f9ff 48%,#eaf4fb 100%)", css)
+        self.assertNotIn("linear-gradient(120deg,#211b52,#3f2f9e 55%,#0f766e)", css)
+
+
 class DeploymentReadinessTests(unittest.TestCase):
     def test_health_endpoint_is_public_json(self) -> None:
         status, headers, body = Client().call("/health")
@@ -2438,6 +2816,288 @@ class DeploymentReadinessTests(unittest.TestCase):
     def test_local_storage_backend_is_default(self) -> None:
         self.assertEqual(Config.DB_BACKEND, "sqlite")
         self.assertEqual(Config.STORAGE_BACKEND, "local")
+
+
+class WhatIfSimulationTests(unittest.TestCase):
+    API = "/api/what-if/v1"
+    JUDEA_IDEA = "Viajar al año 30 d. C., en Judea, con conocimientos de la historia futura"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        init_db()
+        cls.client = Client()
+
+    def setUp(self) -> None:
+        status, _, body = self.client.call(self.API + "/guest")
+        self.assertTrue(status.startswith("200"), body[:200])
+        self.guest = json.loads(body)["token"]
+        previous = one("SELECT value FROM settings WHERE category='whatif' AND key='text_provider'")
+        if previous:
+            self.addCleanup(set_setting, "whatif", "text_provider", previous["value"])
+        set_setting("whatif", "text_provider", "local")
+        set_setting("whatif", "image_provider", "schematic")
+
+    def api(self, path: str, form: dict | None = None, method: str = "GET", guest: str = "") -> tuple[str, dict]:
+        params = dict(form or {})
+        params["guest"] = guest or self.guest
+        if method == "POST":
+            params["csrf"] = public_csrf_token()
+            status, _, body = self.client.call(self.API + path, method, params)
+        else:
+            separator = "&" if "?" in path else "?"
+            status, _, body = self.client.call(self.API + path + separator + urllib.parse.urlencode(params))
+        return status, json.loads(body)
+
+    def _key(self, label: str) -> str:
+        return f"sim-{self._testMethodName}-{label}-{uuid.uuid4().hex[:8]}"
+
+    def _create_judea(self) -> int:
+        payload = {
+            "title": "Judea, año 30 d. C.",
+            "premise": self.JUDEA_IDEA,
+            "description": "Una simulación histórica sobre decisiones imposibles en Judea.",
+            "genre": "historia-alternativa",
+            "style": "realista",
+            "depth": "rapida",
+            "format": "interactivo",
+            "first_scene": "Una caravana se detiene al amanecer en el camino de Jerusalén.",
+            "rules": json.dumps([
+                {"text": "El viajero conoce la historia futura, pero no puede probarla", "kind": "established"},
+                {"text": "La escena debe respetar el contexto de Judea en el año 30", "kind": "established"},
+            ]),
+            "characters": json.dumps([
+                {"name": "María", "identity": "Comerciante de la caravana", "personality": "Prudente y curiosa"},
+                {"name": "Simón", "identity": "Guardia del templo", "personality": "Desconfiado"},
+            ]),
+            "locations": json.dumps([
+                {"name": "Camino de Jerusalén", "kind": "ruta", "description": "Un sendero polvoriento al amanecer"},
+                {"name": "Puesto de la caravana", "kind": "asentamiento", "description": "Tiendas bajas y mercancías dispersas"},
+            ]),
+            "chapter_length": "escena",
+            "point_of_view": "segunda persona",
+            "idempotency_key": self._key("judea"),
+        }
+        status, data = self.api("/realities", payload, "POST")
+        self.assertTrue(status.startswith("200"), data)
+        return int(data["reality"]["id"])
+
+    def test_judea_simulation_full_flow(self) -> None:
+        reality_id = self._create_judea()
+        status, created = self.api(f"/realities/{reality_id}")
+        self.assertTrue(status.startswith("200"), created)
+        self.assertIn("Judea", created["reality"]["premise"])
+        simulation = created.get("simulation") or {}
+        self.assertTrue(simulation)
+        self.assertEqual(int(simulation.get("scene_number") or 0), 1)
+        self.assertTrue(str(simulation.get("content") or "").strip())
+        self.assertTrue(3 <= len(simulation.get("suggested_actions") or []) <= 5)
+        self.assertTrue(simulation.get("location"))
+        self.assertTrue(simulation.get("characters_present"))
+        cards = query(
+            "SELECT metadata FROM whatif_memory_cards WHERE reality_id=? AND kind='simulation' ORDER BY id DESC",
+            (reality_id,),
+        )
+        self.assertTrue(cards)
+        self.assertEqual(json.loads(cards[0]["metadata"]).get("source"), "simulation")
+
+        status, advanced = self.api(f"/realities/{reality_id}/turn", {
+            "action": "Preguntar a María qué ha visto en el camino",
+            "timeline": created["timeline_id"],
+            "idempotency_key": self._key("turn"),
+        }, "POST")
+        self.assertTrue(status.startswith("200"), advanced)
+        self.assertEqual(int(advanced["simulation"]["scene_number"]), 2)
+        self.assertEqual(advanced["simulation"]["last_action"], "Preguntar a María qué ha visto en el camino")
+        self.assertTrue(3 <= len(advanced["simulation"]["suggested_actions"]) <= 5)
+        self.assertTrue(advanced["memories"].get("current"))
+
+        status, branched = self.api(f"/realities/{reality_id}/turn", {
+            "action": "Cambiar el pasado antes de que la caravana llegue",
+            "timeline": advanced["timeline_id"],
+            "branch": 1,
+            "idempotency_key": self._key("branch"),
+        }, "POST")
+        self.assertTrue(status.startswith("200"), branched)
+        self.assertNotEqual(int(branched["timeline_id"]), int(created["timeline_id"]))
+        self.assertEqual(int(branched["simulation"]["scene_number"]), 1)
+        versions = query("SELECT action FROM whatif_versions WHERE reality_id=? ORDER BY id DESC", (reality_id,))
+        self.assertTrue(any(row["action"] == "branch" for row in versions))
+
+        status, _, body = self.client.call(self.API + f"/guest")
+        outsider = json.loads(body)["token"]
+        status, denied = self.api(f"/realities/{reality_id}", guest=outsider)
+        self.assertEqual(status[:3], "404")
+        self.assertFalse(denied["ok"])
+
+    def test_simulator_templates_and_markup(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        home = (root / "app/templates/whatif/home.html").read_text(encoding="utf-8")
+        space = (root / "app/templates/whatif/space.html").read_text(encoding="utf-8")
+        script = (root / "app/static/whatif/1.0.2/whatif.js").read_text(encoding="utf-8")
+        self.assertIn("NO LEAS OTRA REALIDAD. VÍVELA.", home)
+        self.assertIn("PLANTILLAS DE SIMULACIÓN", home)
+        self.assertIn("data-wi-actions", space)
+        self.assertIn("data-wi-action-form", space)
+        self.assertIn("data-wi-scene-characters", space)
+        self.assertIn("/realities/' + state.reality.id + '/turn", script)
+        status, config = self.api("/config")
+        self.assertTrue(status.startswith("200"), config)
+        templates = config.get("simulation_templates") or []
+        self.assertTrue(any(item.get("idea") == self.JUDEA_IDEA for item in templates))
+
+
+class WhatIfNarrativeQualityTests(unittest.TestCase):
+    API = "/api/what-if/v1"
+    IDEAS = (
+        ("Viajar al año 30 d. C., en Judea, con conocimientos de la historia futura", ("Judea", "caravana", "Jerusalén")),
+        ("¿Y si los dinosaurios nunca se hubieran extinguido?", ("fósil", "huella", "helechos")),
+        ("Dos desconocidos descubren que comparten los mismos sueños", ("sueño", "cuaderno", "Nera")),
+        ("La humanidad recibe una señal extraterrestre", ("marciana", "Estación Umbral", "Ada")),
+        ("Despertar en una civilización futurista", ("ciudad", "Ine", "memoria")),
+    )
+    BANNED = (
+        r"\b\d+\.\d+\.\d+\b",
+        r"\[(?:established|proposed|confirmed|unknown|belief)\]",
+        r"(?i)\bciclos?\b",
+        r"(?i)\bbloques?\b",
+        r"(?i)\bregistros?\b",
+        r"(?i)\bregistrad[oa]s?\b",
+        r"(?i)\bsecuencias?\b",
+        r"(?i)\bfragmentos?\b",
+        r"(?i)nadie había registrado",
+        r"(?i)la explicación parecía suficiente",
+        r"(?i)la intervención reciente obligaba",
+        r"(?i)ya no es una hipótesis",
+        r"(?i)acaba de dejar de ser una idea",
+    )
+    SECOND_PERSON = re.compile(
+        r"\b(?:despiertas|llegas|oyes|elegiste|entraste|creíste|acercas|ves|viste|decides|haces|tomas|guardas|sientes|podías|sigues|compruebas)\b",
+        re.IGNORECASE,
+    )
+    SENSORY = (
+        "luz", "polvo", "vapor", "humo", "zumbido", "frío", "olor", "sombra", "niebla", "bruma",
+        "aire", "barro", "helechos", "cristal", "caravana", "camino", "mercancías", "voz", "sello",
+        "moneda", "pergamino", "huella", "fósil", "ramas", "hueso", "pluma", "cáscara", "diente",
+        "hoja", "sueño", "cuaderno", "carta", "reloj", "tinta", "aguja", "marciana", "estación",
+        "antena", "pantalla", "cápsula", "lámina", "consola", "ciudad", "pasarela", "vehículo",
+        "torre", "tarjeta", "pulsera",
+    )
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        init_db()
+        cls.client = Client()
+
+    def setUp(self) -> None:
+        status, _, body = self.client.call(self.API + "/guest")
+        self.assertTrue(status.startswith("200"), body[:200])
+        self.guest = json.loads(body)["token"]
+        for key, value in (("text_provider", "local"), ("image_provider", "schematic"), ("generate_images", "0")):
+            row = one("SELECT value FROM settings WHERE category='whatif' AND key=?", (key,))
+            if row:
+                self.addCleanup(set_setting, "whatif", key, row["value"])
+            set_setting("whatif", key, value)
+
+    def api(self, path: str, form: dict, method: str = "POST") -> tuple[str, dict]:
+        params = dict(form)
+        params["guest"] = self.guest
+        params["csrf"] = public_csrf_token()
+        status, _, body = self.client.call(self.API + path, method, params)
+        return status, json.loads(body)
+
+    def key(self, label: str) -> str:
+        return f"narrative-{self._testMethodName}-{label}-{uuid.uuid4().hex[:8]}"
+
+    def create(self, idea: str, label: str) -> dict:
+        proposal = engine.local_proposal({"idea": idea})
+        payload = {
+            "title": proposal["title"],
+            "premise": proposal["premise"],
+            "description": proposal["description"],
+            "genre": proposal["genre"],
+            "style": proposal["style"],
+            "depth": proposal["depth"],
+            "format": proposal["format"],
+            "first_scene": proposal["first_scene"],
+            "rules": json.dumps(proposal["rules"]),
+            "characters": json.dumps(proposal["characters"]),
+            "locations": json.dumps(proposal["locations"]),
+            "chapter_length": "escena",
+            "point_of_view": "segunda persona",
+            "idempotency_key": self.key(label),
+        }
+        status, data = self.api("/realities", payload)
+        self.assertTrue(status.startswith("200"), data)
+        return data
+
+    def section(self, content: str, name: str) -> str:
+        match = re.search(rf"^# {re.escape(name)}\s*$(.*?)(?=^# |\Z)", content, flags=re.MULTILINE | re.DOTALL)
+        return match.group(1).strip() if match else ""
+
+    def bullets(self, section: str) -> list[str]:
+        return [line[2:].strip() for line in section.splitlines() if line.strip().startswith("- ")]
+
+    def assert_clean(self, content: str) -> None:
+        for pattern in self.BANNED:
+            self.assertNotRegex(content, pattern)
+
+    def paragraphs(self, content: str) -> set[str]:
+        return {
+            item.strip().lower()
+            for item in re.split(r"\n\s*\n", content)
+            if item.strip()
+        }
+
+    def test_five_hypotheses_are_immersive(self) -> None:
+        titles: set[str] = set()
+        for index, (idea, keywords) in enumerate(self.IDEAS):
+            data = self.create(idea, f"idea-{index}")
+            chapter = data["chapter"]
+            content = chapter["content"]
+            self.assert_clean(content)
+            self.assertTrue(140 <= len(content.split()) <= 500, len(content.split()))
+            self.assertTrue(self.SECOND_PERSON.search(content), content[:300])
+            self.assertTrue(any(word in content.lower() for word in self.SENSORY), content[:300])
+            self.assertTrue(any(word.lower() in content.lower() for word in keywords), content[:300])
+            self.assertTrue(self.section(content, "Tu llegada"))
+            self.assertTrue(2 <= len(self.bullets(self.section(content, "Lo que debes saber"))) <= 5)
+            self.assertTrue(3 <= len(self.bullets(self.section(content, "Posibilidades de esta realidad"))) <= 5)
+            self.assertTrue(self.section(content, "Comienza la simulación"))
+            self.assertNotIn("# Lo que debes saber", self.section(content, "Comienza la simulación"))
+            titles.add(chapter["title"])
+        self.assertEqual(len(titles), 5)
+
+    def test_continuity_avoids_repetition(self) -> None:
+        created = self.create(self.IDEAS[0][0], "origin")
+        first = created["chapter"]["content"]
+        self.assertNotIn("1.1.1", first)
+        timeline_id = created["timeline_id"]
+        current = created["memories"].get("current")
+        previous_content = first
+        previous_title = created["chapter"]["title"]
+        actions = (
+            "Preguntar a María qué sabe sobre la fecha",
+            "Seguir a Simón sin revelar lo que sabes",
+        )
+        for index, action in enumerate(actions):
+            status, data = self.api(f"/realities/{created['reality']['id']}/turn", {
+                "action": action,
+                "timeline": timeline_id,
+                "idempotency_key": self.key(f"turn-{index}"),
+            })
+            self.assertTrue(status.startswith("200"), data)
+            content = data["chapter"]["content"]
+            self.assert_clean(content)
+            self.assertIn(action.lower(), content.lower())
+            self.assertFalse(self.paragraphs(previous_content) & self.paragraphs(content))
+            self.assertNotEqual(previous_title, data["chapter"]["title"])
+            self.assertNotIn("# Tu llegada", content)
+            self.assertTrue(self.SECOND_PERSON.search(content), content[:300])
+            self.assertTrue(data["memories"].get("current"))
+            self.assertNotEqual(current, data["memories"].get("current"))
+            current = data["memories"].get("current")
+            previous_content = content
+            previous_title = data["chapter"]["title"]
 
 
 if __name__ == "__main__":

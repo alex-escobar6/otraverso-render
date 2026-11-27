@@ -39,6 +39,7 @@ WHATIF_FIELDS = [
     ("visual_background_color", "Color de fondo WHAT IF (#RRGGBB)", "text"),
     ("visual_elements", "Elementos visuales (JSON)", "textarea"),
     ("narrative_templates", "Plantillas narrativas (JSON)", "textarea"),
+    ("chapter_scene_words", "Palabras por escena corta", "number"),
     ("chapter_normal_words", "Palabras por capítulo normal", "number"),
     ("chapter_extended_words", "Palabras por capítulo extenso", "number"),
     ("chapter_cinematic_words", "Palabras por capítulo cinematográfico", "number"),

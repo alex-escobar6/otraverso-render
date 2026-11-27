@@ -153,7 +153,8 @@ class Response:
         headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         headers.setdefault("Content-Security-Policy", (
             "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; "
-            "img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; "
+            "connect-src 'self' blob:; img-src 'self' data: blob: https:; "
+            "style-src 'self' 'unsafe-inline'; script-src 'self'; "
             "form-action 'self' https://wa.me"
         ))
         start_response(f"{self.status} {STATUS.get(self.status, 'Unknown')}", list(headers.items()))
