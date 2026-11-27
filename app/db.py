@@ -988,8 +988,8 @@ def _upgrade_site_pages(conn) -> None:
         )
         constraints = conn.execute(
             "SELECT conname FROM pg_constraint WHERE conrelid='site_pages'::regclass "
-            "AND contype IN ('u','c') AND (pg_get_constraintdef(oid) LIKE '%(route)%' "
-            "OR pg_get_constraintdef(oid) LIKE '%status%')"
+            "AND contype IN ('u','c') AND (strpos(pg_get_constraintdef(oid), '(route)') > 0 "
+            "OR strpos(pg_get_constraintdef(oid), 'status') > 0)"
         ).fetchall()
         for row in constraints:
             conn.execute(f"ALTER TABLE site_pages DROP CONSTRAINT {row[0]}")
