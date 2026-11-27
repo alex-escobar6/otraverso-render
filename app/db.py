@@ -1116,7 +1116,8 @@ def _seed() -> None:
             )
         conn.execute(
             "UPDATE site_pages SET coming_soon_message=?, notice_description=? "
-            "WHERE code='play' AND coming_soon_message LIKE 'PLAY estará disponible próximamente%'",
+            "WHERE code='play' AND substr(coming_soon_message, 1, "
+            "length('PLAY estará disponible próximamente')) = 'PLAY estará disponible próximamente'",
             ("PLAY está en preparación. Consulta las experiencias habilitadas.",
              "PLAY está en preparación. Consulta las experiencias habilitadas."),
         )
